@@ -13,7 +13,7 @@ function Brand({ variant = "sidebar" }) {
           <img className="brand-logo" src={dashboardLogo} alt="Logo NSolve-Tech" />
           <span className="brand-copy">
             <strong className="brand-title">NSolve-Tech</strong>
-            {!dashboardCompact && <span className="brand-caption">PORTAL GURU</span>}
+            {!dashboardCompact && <span className="brand-caption">PORTAL SISWA</span>}
           </span>
         </>
       ) : (
