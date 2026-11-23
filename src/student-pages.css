@@ -5031,3 +5031,21 @@
     padding-right: 0;
   }
 }
+
+@media (max-width: 760px) {
+  .result-content {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+
+  .result-hero,
+  .result-stats,
+  .result-questions,
+  .result-answer-review {
+    min-width: 0;
+  }
+
+  .result-questions > header aside,
+  .result-answer-review article > div > p {
+    overflow-wrap: anywhere;
+  }
+}

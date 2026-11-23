@@ -31,6 +31,7 @@ function TeacherIcon({ name }) {
     clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
     check: <path d="m5 12 4 4L19 6" />,
     eye: <><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z" /><circle cx="12" cy="12" r="2.5" /></>,
+    bell: <><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M10 21h4" /></>,
     arrow: <path d="M4 12h15m-6-6 6 6-6 6" />,
     back: <><path d="m15 18-6-6 6-6" /><path d="M9 12h12" /></>,
     logout: <><path d="M10 17l5-5-5-5M15 12H3" /><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7" /></>,
@@ -59,6 +60,11 @@ export function TeacherShell({
   const isAdmin = user?.role === "admin";
   const [profile, setProfile] = useState(null);
   const [profileError, setProfileError] = useState("");
+  const [remedialRequests, setRemedialRequests] = useState([]);
+  const [remedialLoaded, setRemedialLoaded] = useState(false);
+  const [remedialError, setRemedialError] = useState("");
+  const [remedialOpen, setRemedialOpen] = useState(false);
+  const [remedialBusy, setRemedialBusy] = useState("");
   useEffect(() => {
     if (user?.role !== "teacher") return undefined;
     let activeRequest = true;
@@ -67,6 +73,46 @@ export function TeacherShell({
       .catch((requestError) => { if (activeRequest) setProfileError(requestError.message); });
     return () => { activeRequest = false; };
   }, [user?.role]);
+  useEffect(() => {
+    if (user?.role !== "teacher") return undefined;
+    let active = true;
+    let timerId;
+    async function loadRemedialRequests() {
+      try {
+        const { requests } = await teacherApi.getRemedialRequests();
+        if (active) {
+          setRemedialRequests(requests);
+          setRemedialError("");
+        }
+      } catch (requestError) {
+        if (active) setRemedialError(requestError.message);
+      } finally {
+        if (active) {
+          setRemedialLoaded(true);
+          timerId = window.setTimeout(loadRemedialRequests, 30_000);
+        }
+      }
+    }
+    loadRemedialRequests();
+    return () => {
+      active = false;
+      window.clearTimeout(timerId);
+    };
+  }, [user?.role]);
+
+  async function updateRemedialRequest(requestId, status) {
+    setRemedialBusy(requestId);
+    setRemedialError("");
+    try {
+      await teacherApi.updateRemedialRequest(requestId, status);
+      const { requests } = await teacherApi.getRemedialRequests();
+      setRemedialRequests(requests);
+    } catch (requestError) {
+      setRemedialError(requestError.message);
+    } finally {
+      setRemedialBusy("");
+    }
+  }
   const displayName = profile?.fullName ?? user?.fullName ?? "Pengguna";
   const displaySubject = profile?.subject ?? "";
   const activeAdminSchool = adminSchools?.find((school) => school.id === selectedSchoolId);
@@ -94,6 +140,7 @@ export function TeacherShell({
     ]);
   const workspace = workspaceLabel ?? (isAdmin ? "WORKSPACE ADMIN" : user?.role === "student" ? "PORTAL SISWA" : "WORKSPACE GURU");
   const accountDescription = roleDescription ?? (isAdmin ? "Administrator" : user?.role === "student" ? "Siswa" : [profile?.positionTitle ?? "Guru", displaySubject].filter(Boolean).join(" "));
+  const pendingRemedialCount = remedialRequests.filter((request) => request.status === "pending").length;
   return (
     <div className="teacher-app">
       <aside className="teacher-sidebar">
@@ -123,6 +170,68 @@ export function TeacherShell({
               {adminSchools.map((school) => <option value={school.id} key={school.id}>{school.name}</option>)}
             </select>
             : <span>{displaySchool}</span>}</div>
+          {user?.role === "teacher" && <div className="teacher-notification">
+            <button
+              type="button"
+              className="teacher-notification-button"
+              aria-label={`Notifikasi remedial${pendingRemedialCount
+                ? `, ${pendingRemedialCount} pengajuan menunggu`
+                : ""}`}
+              aria-expanded={remedialOpen}
+              onClick={() => setRemedialOpen((open) => !open)}
+            >
+              <TeacherIcon name="bell" />
+              {pendingRemedialCount > 0 && (
+                <span>{pendingRemedialCount}</span>
+              )}
+            </button>
+            {remedialOpen && <section className="teacher-notification-panel" aria-label="Pengajuan remedial">
+              <header>
+                <div><strong>Pengajuan remedial</strong><small>Notifikasi diperbarui otomatis</small></div>
+                <button type="button" aria-label="Tutup notifikasi" onClick={() => setRemedialOpen(false)}>×</button>
+              </header>
+              {remedialError && <p className="teacher-notification-error" role="alert">{remedialError}</p>}
+              {!remedialLoaded && <p className="teacher-notification-empty">Memuat pengajuan...</p>}
+              {remedialLoaded && !remedialError && remedialRequests.length === 0 && (
+                <p className="teacher-notification-empty">Belum ada pengajuan remedial.</p>
+              )}
+              {remedialRequests.slice(0, 8).map((request) => (
+                <article className="teacher-notification-item" key={request.id}>
+                  <div>
+                    <strong>{request.studentName} · {request.className}</strong>
+                    <small>{request.examTitle} · Nilai {Math.round(request.score)} / KKM {request.kkm}</small>
+                  </div>
+                  <span className={`teacher-remedial-status ${request.status}`}>{{
+                    pending: "Menunggu",
+                    approved: "Disetujui",
+                    rejected: "Ditolak",
+                    scheduled: "Terjadwal",
+                  }[request.status] ?? request.status}</span>
+                  {request.status === "pending" && <div className="teacher-notification-actions">
+                    <button
+                      type="button"
+                      className="teacher-primary-button"
+                      disabled={remedialBusy === request.id}
+                      onClick={() => updateRemedialRequest(request.id, "approved")}
+                    >Setujui</button>
+                    <button
+                      type="button"
+                      className="teacher-secondary-button"
+                      disabled={remedialBusy === request.id}
+                      onClick={() => updateRemedialRequest(request.id, "rejected")}
+                    >Tolak</button>
+                  </div>}
+                  {request.status === "approved" && <div className="teacher-notification-actions">
+                    <a className="teacher-secondary-button" href={`/guru/soal/baru?remedialRequestId=${encodeURIComponent(request.id)}&remedialMode=new`}>Buat soal baru</a>
+                    <a className="teacher-primary-button" href={`/guru/soal/baru?remedialRequestId=${encodeURIComponent(request.id)}&remedialMode=repeat`}>Ulangi soal sebelumnya</a>
+                  </div>}
+                  {request.status === "scheduled" && request.scheduledExamTitle && (
+                    <small className="teacher-notification-scheduled">Ujian: {request.scheduledExamTitle}</small>
+                  )}
+                </article>
+              ))}
+            </section>}
+          </div>}
           <div className="teacher-account">
             <span><strong>{displayName}</strong><small>{accountDescription}</small></span>
             <i>{initials}</i>
@@ -502,7 +611,10 @@ function TeacherDashboard({ user }) {
                       <button type="button" className="teacher-primary-button" disabled={requestBusy === item.id} onClick={() => decideRemedial(item.id, "approved")}>Setujui</button>
                       <button type="button" className="teacher-secondary-button" disabled={requestBusy === item.id} onClick={() => decideRemedial(item.id, "rejected")}>Tolak</button>
                     </div>}
-                    {item.status === "approved" && <a className="teacher-secondary-button" href={`/guru/soal/baru?remedialRequestId=${encodeURIComponent(item.id)}`}>Jadwalkan Ujian Remedial</a>}
+                    {item.status === "approved" && <div className="teacher-remedial-actions">
+                      <a className="teacher-secondary-button" href={`/guru/soal/baru?remedialRequestId=${encodeURIComponent(item.id)}&remedialMode=new`}>Buat soal baru</a>
+                      <a className="teacher-primary-button" href={`/guru/soal/baru?remedialRequestId=${encodeURIComponent(item.id)}&remedialMode=repeat`}>Ulangi soal sebelumnya</a>
+                    </div>}
                   </article>
                 ))}
               </div>
@@ -974,6 +1086,7 @@ function createQuestionDraft(type) {
 function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
   const isEditing = Boolean(examId);
   const remedialRequestId = new URLSearchParams(window.location.search).get("remedialRequestId");
+  const remedialMode = new URLSearchParams(window.location.search).get("remedialMode") ?? "new";
   const [step, setStep] = useState(0);
   const [classes, setClasses] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -981,7 +1094,7 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
   const [activeClassGrade, setActiveClassGrade] = useState("X");
   const [loadingClasses, setLoadingClasses] = useState(true);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
-  const [loadingExam, setLoadingExam] = useState(isEditing);
+  const [loadingExam, setLoadingExam] = useState(isEditing || Boolean(remedialRequestId));
   const [saving, setSaving] = useState(false);
   const [savingToken, setSavingToken] = useState(false);
   const [tokenNotice, setTokenNotice] = useState("");
@@ -1024,7 +1137,7 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
         ? teacherApi.getRemedialRequests()
         : Promise.resolve({ requests: [] }),
     ])
-      .then(([classData, subjectData, examData, remedialData]) => {
+      .then(async ([classData, subjectData, examData, remedialData]) => {
         if (!active) return;
         setSubjects(subjectData.subjects.map((subject) => subject.name));
         const availableClasses = classData.classes.filter((item) => {
@@ -1078,7 +1191,13 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
           });
         } else if (remedialRequestId) {
           const request = remedialData.requests.find((item) => item.id === remedialRequestId);
-          if (request?.status === "approved") {
+          if (request?.status !== "approved") {
+            setError(request
+              ? "Permintaan remedial harus disetujui sebelum membuat jadwal."
+              : "Pengajuan remedial tidak ditemukan.");
+            return;
+          }
+          if (request.status === "approved") {
             setSelectedClassIds(
               availableClasses.filter((item) => item.id === request.classId).map((item) => item.id),
             );
@@ -1086,15 +1205,50 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
             if (remedialClass) {
               setActiveClassGrade(remedialClass.gradeLevel ?? remedialClass.name.split(" ")[0]);
             }
-            setForm((current) => ({
-              ...current,
-              subject: request.subject,
-              title: `Remedial ${request.examTitle}`.slice(0, 120),
-              startMode: "scheduled",
-              kkm: request.kkm,
-            }));
-          } else if (request) {
-            setError("Permintaan remedial harus disetujui sebelum membuat jadwal.");
+            if (remedialMode === "repeat") {
+              if (!request.examId) throw new Error("Data ujian asal tidak tersedia untuk diulangi.");
+              const { exam: sourceExam } = await teacherApi.getExam(request.examId);
+              if (!active) return;
+              if (sourceExam.questions.some((question) => !["multiple_choice", "essay"].includes(question.type))) {
+                throw new Error("Tipe soal ujian asal belum dapat diulangi. Pilih opsi Buat soal baru.");
+              }
+              const questions = sourceExam.questions.map((question) => {
+                const isEssay = question.type === "essay";
+                return {
+                  type: isEssay ? "essay" : "multiple_choice",
+                  prompt: question.prompt,
+                  answerKey: question.answerKey ?? "",
+                  points: question.points,
+                  options: question.options.map((option) => option.content),
+                  correctOption: question.options.find((option) => option.isCorrect)?.label ?? "A",
+                };
+              });
+              setForm((current) => ({
+                ...current,
+                type: questions.some((question) => question.type === "essay") ? "essay" : "multiple_choice",
+                subject: request.subject,
+                title: `Remedial ${request.examTitle}`.slice(0, 120),
+                startMode: "scheduled",
+                durationMinutes: sourceExam.durationMinutes,
+                kkm: request.kkm,
+                academicYear: sourceExam.academicYear,
+                semester: sourceExam.semester,
+                examType: sourceExam.examType,
+                autoGrade: sourceExam.autoGrade,
+                randomizeQuestions: sourceExam.randomizeQuestions,
+                randomizeOptions: sourceExam.randomizeOptions,
+                showScore: sourceExam.showScore !== false,
+                questions,
+              }));
+            } else {
+              setForm((current) => ({
+                ...current,
+                subject: request.subject,
+                title: `Remedial ${request.examTitle}`.slice(0, 120),
+                startMode: "scheduled",
+                kkm: request.kkm,
+              }));
+            }
           }
         }
       })
@@ -1106,7 +1260,7 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
         setLoadingExam(false);
       });
     return () => { active = false; };
-  }, [examId, isEditing, remedialRequestId]);
+  }, [examId, isEditing, remedialMode, remedialRequestId]);
 
   function updateQuestion(index, changes) {
     setForm((current) => ({

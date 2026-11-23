@@ -1,5 +1,6 @@
 .teacher-app {
   min-height: 100vh;
+  min-height: 100dvh;
   background: #f3f6fa;
   color: #172436;
 }
@@ -205,6 +206,158 @@
 .teacher-account button svg {
   width: 14px;
   height: 14px;
+}
+
+.teacher-notification {
+  position: relative;
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.teacher-notification-button {
+  position: relative;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border: 1px solid #e5eaef;
+  border-radius: 10px;
+  background: #fff;
+  color: #176d69;
+}
+
+.teacher-notification-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.teacher-notification-button > span {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  display: grid;
+  min-width: 18px;
+  height: 18px;
+  place-items: center;
+  padding: 0 4px;
+  border: 2px solid #fff;
+  border-radius: 12px;
+  background: #d84a46;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.teacher-notification-panel {
+  position: absolute;
+  z-index: 8;
+  top: calc(100% + 12px);
+  right: 0;
+  width: min(390px, calc(100vw - 24px));
+  max-height: min(70dvh, 560px);
+  overflow: auto;
+  border: 1px solid #e5ebee;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 16px 42px rgb(22 39 56 / 18%);
+}
+
+.teacher-notification-panel > header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 15px 16px;
+  border-bottom: 1px solid #edf1f3;
+  background: #fff;
+}
+
+.teacher-notification-panel > header > div {
+  display: grid;
+  gap: 4px;
+}
+
+.teacher-notification-panel > header strong {
+  color: #233848;
+  font-size: 12px;
+}
+
+.teacher-notification-panel > header small,
+.teacher-notification-item small {
+  color: #71808e;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.teacher-notification-panel > header button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 0;
+  border-radius: 8px;
+  background: #f2f5f7;
+  color: #546372;
+  font-size: 20px;
+}
+
+.teacher-notification-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 9px 12px;
+  padding: 13px 15px;
+  border-bottom: 1px solid #edf1f3;
+}
+
+.teacher-notification-item > div:first-child {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.teacher-notification-item > div:first-child strong {
+  color: #2e4050;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.teacher-notification-item > .teacher-remedial-status {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.teacher-notification-actions {
+  display: flex;
+  flex-wrap: wrap;
+  grid-column: 1 / -1;
+  gap: 7px;
+}
+
+.teacher-notification-actions > * {
+  flex: 1 1 120px;
+  min-width: 0;
+  white-space: normal;
+  text-align: center;
+}
+
+.teacher-notification-scheduled {
+  grid-column: 1 / -1;
+}
+
+.teacher-notification-empty,
+.teacher-notification-error {
+  margin: 0;
+  padding: 18px 16px;
+  color: #71808e;
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.teacher-notification-error {
+  color: #a53d3d;
 }
 
 .teacher-content {
@@ -2129,6 +2282,34 @@
 }
 
 @media (max-width: 760px) {
+  .teacher-content {
+    padding-bottom: calc(46px + env(safe-area-inset-bottom));
+  }
+
+  .teacher-header-school {
+    flex: 1 1 auto;
+    overflow: hidden;
+  }
+
+  .teacher-header-school > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .teacher-notification {
+    margin-left: 8px;
+  }
+
+  .teacher-notification-button {
+    width: 31px;
+    height: 31px;
+  }
+
+  .teacher-notification-panel {
+    right: -67px;
+    max-height: min(70dvh, 560px);
+  }
+
   .teacher-remedial-request {
     align-items: flex-start;
   }
@@ -2144,6 +2325,12 @@
 
   .teacher-remedial-actions > button {
     flex: 1;
+  }
+
+  .teacher-remedial-actions > a {
+    flex: 1;
+    white-space: normal;
+    text-align: center;
   }
 }
 
