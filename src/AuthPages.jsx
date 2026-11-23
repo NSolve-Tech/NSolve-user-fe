@@ -133,8 +133,7 @@ export default function AuthPage({ mode, onAuthenticate }) {
                   <option value="">{loadingClasses ? "Memuat kelas..." : "Pilih kelas"}</option>
                   {registrationOptions.classes
                     .filter((item) =>
-                      item.gradeLevel === values.gradeLevel &&
-                      new RegExp(`^${values.gradeLevel} [0-9]+$`).test(item.name),
+                      item.gradeLevel === values.gradeLevel,
                     )
                     .filter((item, index, items) =>
                       items.findIndex((candidate) => candidate.name === item.name) === index,

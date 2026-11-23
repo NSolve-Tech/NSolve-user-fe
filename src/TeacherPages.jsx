@@ -1167,9 +1167,14 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
         if (!active) return;
         setSubjects(subjectData.subjects.map((subject) => subject.name));
         const availableClasses = classData.classes.filter((item) => {
-          const match = item.name.match(/^(X|XI|XII) (\d{1,2})$/);
-          if (!match) return false;
-          const maximum = match[1] === "X" ? 12 : 11;
+          const match = item.name.match(/^(X|XI F|XI|XII) (\d{1,2})$/);
+          const expectedLevel = item.gradeLevel === "XI" &&
+            (user?.schoolId === "school-sman2-lubuk-linggau" ||
+              user?.schoolName === "SMAN 2 Kota Lubuk Linggau")
+            ? "XI F"
+            : item.gradeLevel;
+          if (!match || match[1] !== expectedLevel) return false;
+          const maximum = item.gradeLevel === "X" ? 12 : 11;
           return Number(match[2]) >= 1 && Number(match[2]) <= maximum;
         });
         setClasses(availableClasses);

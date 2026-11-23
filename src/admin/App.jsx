@@ -439,7 +439,11 @@ function UserPage({ role, title, currentUser, schoolName }) {
   </>;
 }
 
-function ClassesPage() {
+function ClassesPage({ schoolId, schoolName }) {
+  const usesXIClassF = schoolId === "school-sman2-lubuk-linggau" ||
+    schoolName === "SMAN 2 Kota Lubuk Linggau";
+  const className = (gradeLevel, number) =>
+    `${gradeLevel === "XI" && usesXIClassF ? "XI F" : gradeLevel} ${number}`;
   const [classes, setClasses] = useState([]);
   const [editing, setEditing] = useState(null);
   const [error, setError] = useState("");
@@ -480,8 +484,8 @@ function ClassesPage() {
     </tbody></table></div></section>
     {editing && <div className="modal-backdrop"><form className="modal-card" onSubmit={save}>
       <header><div><span>DATA SEKOLAH</span><h2>{editing.id ? "Edit Kelas" : "Tambah Kelas"}</h2></div><button type="button" onClick={() => setEditing(null)}>×</button></header>
-      <label>Jenjang<select value={editing.gradeLevel} onChange={(event) => setEditing({ ...editing, gradeLevel: event.target.value, name: `${event.target.value} 1` })}><option>X</option><option>XI</option><option>XII</option></select></label>
-      <label>Kelas<select value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })}>{Array.from({ length: editing.gradeLevel === "X" ? 12 : 11 }, (_, i) => `${editing.gradeLevel} ${i + 1}`).map((name) => <option key={name}>{name}</option>)}</select></label>
+      <label>Jenjang<select value={editing.gradeLevel} onChange={(event) => setEditing({ ...editing, gradeLevel: event.target.value, name: className(event.target.value, 1) })}><option>X</option><option>XI</option><option>XII</option></select></label>
+      <label>Kelas<select value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })}>{Array.from({ length: editing.gradeLevel === "X" ? 12 : 11 }, (_, i) => className(editing.gradeLevel, i + 1)).map((name) => <option key={name}>{name}</option>)}</select></label>
       <footer><button className="secondary" type="button" onClick={() => setEditing(null)}>Batal</button><button className="primary" disabled={saving}>{saving ? "Menyimpan..." : "Simpan"}</button></footer>
     </form></div>}
   </>;
@@ -900,7 +904,10 @@ export default function App({ basePath = "", initialUser = null, onLogout: onGlo
   else if (path === "/siswa") page = <UserPage role="student" title="Data Siswa" currentUser={auth.user} schoolName={activeSchool?.name ?? auth.user.schoolName} />;
   else if (path === "/guru") page = <UserPage role="teacher" title="Data Guru" currentUser={auth.user} schoolName={activeSchool?.name ?? auth.user.schoolName} />;
   else if (path === "/admin") page = <UserPage role="admin" title="Data Admin" currentUser={auth.user} schoolName={activeSchool?.name ?? auth.user.schoolName} />;
-  else if (path === "/kelas") page = <ClassesPage />;
+  else if (path === "/kelas") page = <ClassesPage
+    schoolId={activeSchool?.id ?? auth.user.schoolId}
+    schoolName={activeSchool?.name ?? auth.user.schoolName}
+  />;
   else if (path === "/mapel") page = <SubjectsPage />;
   else if (path === "/ujian") page = <ExamsPage />;
   else if (path === "/pengaturan") page = <SchoolSettings onSchoolUpdated={(school) => setSchools((current) =>
