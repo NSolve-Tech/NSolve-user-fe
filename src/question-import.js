@@ -117,8 +117,8 @@ export function parseImportedQuestions(text) {
         }
         continue;
       }
-      if (activeOption) activeOption.content += `${activeOption.content ? " " : ""}${line}`;
-      else item.prompt += `${item.prompt ? " " : ""}${line}`;
+      if (activeOption) activeOption.content += `${activeOption.content ? "\n" : ""}${line}`;
+      else item.prompt += `${item.prompt ? "\n" : ""}${line}`;
     }
     item.options.sort((left, right) => left.label.localeCompare(right.label));
     item.options.forEach((option) => { option.isCorrect = option.label === item.answerKey; });

@@ -67,10 +67,30 @@ Kunci: D`);
 
   assert.deepEqual(mapImportedQuestionsToExamDraft(questions), [{
     type: "multiple_choice",
-    prompt: "24. Perhatikan reaksi berikut: 1) H2C=CH2 + H2 -> H3C-CH3",
+    prompt: "24. Perhatikan reaksi berikut:\n1) H2C=CH2 + H2 -> H3C-CH3",
     options: ["Pilihan satu", "Pilihan dua", "Pilihan tiga", "Pilihan empat", "Pilihan lima"],
     correctOption: "D",
     answerKey: "",
     points: 1,
   }]);
+});
+
+test("preserves Unicode arrows and paragraph line breaks", () => {
+  const text = `16. C6H12O6(s) + 6O2(g) → 6CO2(g) + 6H2O(l)
+Bagian pertama persamaan kimia.
+Bagian kedua persamaan kimia.
+A. 5 gram
+B. 10 gram
+C. 15 gram
+D. 20 gram
+E. 25 gram
+Kunci: C`;
+
+  const { questions, errors } = parseImportedQuestions(text);
+
+  assert.deepEqual(errors, []);
+  assert.equal(questions.length, 1);
+  assert.match(questions[0].prompt, /C6H12O6\(s\).*→.*6H2O\(l\)/);
+  assert.match(questions[0].prompt, /\nBagian pertama persamaan kimia\./);
+  assert.match(questions[0].prompt, /\nBagian kedua persamaan kimia\./);
 });

@@ -2484,6 +2484,10 @@
   line-height: 1.55;
 }
 
+.nsolve-preserve-lines {
+  white-space: pre-wrap;
+}
+
 .teacher-import-preview > article > .correct {
   color: #087c5a;
   font-weight: 700;

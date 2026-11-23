@@ -1774,9 +1774,9 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
               <div><small>{form.subject} · {selectedClasses.map((item) => item.name).join(", ")}</small><h3>{form.title || "Judul Soal"}</h3><span>{form.questions.length} soal · KKM {form.kkm} · {form.randomizeQuestions ? "Urutan diacak per siswa" : "Sesuai urutan guru"}</span></div>
               {form.questions.map((question, index) => (
                 <section key={index}>
-                  <strong>{index + 1}. {question.prompt || "Pertanyaan akan tampil di sini."}</strong>
+                  <strong className="nsolve-preserve-lines">{index + 1}. {question.prompt || "Pertanyaan akan tampil di sini."}</strong>
                   {(question.type ?? form.type) === "essay" ? <div className="teacher-preview-answer-box">Jawaban essay siswa</div> : question.options.map((option, optionIndex) => (
-                    <span key={optionIndex}><i /> {String.fromCharCode(65 + optionIndex)}. {option || `Pilihan ${String.fromCharCode(65 + optionIndex)}`}</span>
+                    <span className="nsolve-preserve-lines" key={optionIndex}><i /> {String.fromCharCode(65 + optionIndex)}. {option || `Pilihan ${String.fromCharCode(65 + optionIndex)}`}</span>
                   ))}
                 </section>
               ))}
@@ -1953,7 +1953,7 @@ function ExamPreview({ user, examId }) {
           {exam.questions.map((question) => (
             <article className="teacher-panel teacher-preview-question" key={question.id}>
               <div className="teacher-preview-question-head"><span>SOAL {question.position}</span><small>{typeNames[question.type]}</small></div>
-              <p>{question.prompt}</p>
+              <p className="nsolve-preserve-lines">{question.prompt}</p>
               {question.options.length ? <div className="teacher-preview-options">{question.options.map((option) => (
                 <label key={option.id}><input
                   type={question.type === "multiple_choice_complex" ? "checkbox" : "radio"}
@@ -1962,7 +1962,7 @@ function ExamPreview({ user, examId }) {
                     ? (answers[question.id] ?? []).includes(option.id)
                     : answers[question.id] === option.id}
                   onChange={() => selectAnswer(question.id, option.id, question.type === "multiple_choice_complex")}
-                /><span><b>{option.label}</b>{option.content}</span></label>
+                /><span className="nsolve-preserve-lines"><b>{option.label}</b>{option.content}</span></label>
               ))}</div> : <textarea rows="3" value={answers[question.id] ?? ""} onChange={(event) => setAnswers({ ...answers, [question.id]: event.target.value })} placeholder="Tulis jawaban Anda..." />}
             </article>
           ))}

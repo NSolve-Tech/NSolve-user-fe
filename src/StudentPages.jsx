@@ -1162,7 +1162,7 @@ function ResultPage({ user, onLogout, search }) {
             {result.questions.map((question) => (
               <article id={`result-question-${question.number}`} key={question.id}>
                 <h3>Soal {question.number}</h3>
-                <p>{question.prompt}</p>
+                <p className="nsolve-preserve-lines">{question.prompt}</p>
                 <div>
                   {question.options.map((option) => {
                     const correct = option.id === question.correctOptionId;
