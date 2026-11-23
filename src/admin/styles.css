@@ -54,9 +54,23 @@ a { color: inherit; text-decoration: none; }
 }
 .header-school { display: flex; min-width: 0; align-items: center; gap: 8px; color: #4c5f64; font-size: 11px; font-weight: 600; }
 .header-school span { color: #17726e; font-size: 16px; }
+.admin-app select:not([multiple]) {
+  min-height: 40px; max-width: 100%; padding: 0 38px 0 11px;
+  appearance: none; -webkit-appearance: none;
+  border: 1px solid #dfe7ea; border-radius: 8px;
+  background-color: #fff;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%235c6d78' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 11px center; background-size: 16px;
+  color: #263b4d; font-size: 11px; line-height: 1.35;
+}
+.admin-app select:not([multiple]):focus-visible {
+  border-color: #398b85; outline: 3px solid rgb(57 139 133 / 18%); outline-offset: 1px;
+}
+.admin-app select:not([multiple]):disabled {
+  background-color: #f3f6f7; color: #7c8994;
+}
 .school-selector {
-  min-width: 160px; max-width: min(32vw, 360px); padding: 7px 30px 7px 10px;
-  border: 1px solid #dfe7ea; border-radius: 8px; background: #fff; color: #4c5f64;
+  width: min(32vw, 360px); min-width: 160px; color: #4c5f64;
   font-size: 11px; font-weight: 600;
 }
 .account { display: flex; flex: 0 0 auto; align-items: center; gap: 12px; text-align: right; white-space: nowrap; }
@@ -189,8 +203,9 @@ td small { display: block; margin-top: 4px; color: #84919b; font-size: 9px; }
   .admin-sidebar nav a { min-height: 38px; flex: 0 0 auto; gap: 7px; padding: 0 10px; font-size: 10px; }
   .admin-main { margin-left: 0; }
   .admin-header { height: 56px; padding: 0 16px; }
-  .header-school { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
-  .school-selector { min-width: 0; max-width: 100%; padding: 6px 24px 6px 8px; font-size: 9px; }
+  .header-school { flex: 1 1 auto; overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+  .admin-app select.school-selector { width: 100%; min-width: 0; font-size: 10px; }
+  .admin-app select:not([multiple]) { min-height: 36px; padding-right: 32px; background-position: right 9px center; }
   .account { gap: 8px; }
   .account > span { display: none; }
   .account > i { width: 30px; height: 30px; }

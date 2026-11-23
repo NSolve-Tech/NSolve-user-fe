@@ -211,7 +211,7 @@
 .teacher-notification {
   position: relative;
   flex: 0 0 auto;
-  margin-left: auto;
+  margin: 0 14px 0 auto;
 }
 
 .teacher-notification-button {
@@ -2297,7 +2297,7 @@
   }
 
   .teacher-notification {
-    margin-left: 8px;
+    margin: 0 8px;
   }
 
   .teacher-notification-button {
@@ -2958,6 +2958,12 @@
 
 .teacher-app select:disabled {
   background-image: none;
+}
+
+.teacher-app select:not([multiple]):focus-visible {
+  border-color: #398b85;
+  outline: 3px solid rgb(57 139 133 / 18%);
+  outline-offset: 1px;
 }
 
 .teacher-table-panel {
