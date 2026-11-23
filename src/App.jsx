@@ -590,7 +590,8 @@ function App() {
     );
   }
   if (!auth.user) {
-    return <AuthPage mode={registering ? "register" : "login"} onAuthenticate={handleAuthenticate} />;
+    if (authRoute) return <AuthPage mode={registering ? "register" : "login"} onAuthenticate={handleAuthenticate} />;
+    return <AuthPage mode="login" onAuthenticate={handleAuthenticate} />;
   }
   if (adminRole) {
     if (!adminRoute) return <main className="auth-page"><p role="status">Mengarahkan ke Dashboard Admin...</p></main>;
