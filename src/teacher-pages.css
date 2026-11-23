@@ -2493,6 +2493,10 @@
   margin-top: 16px;
 }
 
+.teacher-import-preview > .teacher-title-actions {
+  margin-top: 16px;
+}
+
 .teacher-table-scroll {
   overflow-x: auto;
 }

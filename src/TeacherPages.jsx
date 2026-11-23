@@ -2,7 +2,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import mammoth from "mammoth";
 import { adminApi, setAdminSchoolId } from "./admin-api.js";
 import Brand from "./Brand.jsx";
-import { parseImportedQuestions } from "./question-import.js";
+import {
+  IMPORTED_EXAM_QUESTIONS_KEY,
+  mapImportedQuestionsToExamDraft,
+  parseImportedQuestions,
+} from "./question-import.js";
 import { teacherApi } from "./teacher-api.js";
 import "./teacher-pages.css";
 
@@ -1088,6 +1092,23 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
   const isEditing = Boolean(examId);
   const remedialRequestId = new URLSearchParams(window.location.search).get("remedialRequestId");
   const remedialMode = new URLSearchParams(window.location.search).get("remedialMode") ?? "new";
+  const fromImport = new URLSearchParams(window.location.search).get("fromImport") === "1";
+  const [importedExamDraft] = useState(() => {
+    if (!fromImport) return { questions: null, error: "" };
+    try {
+      const importedQuestions = sessionStorage.getItem(IMPORTED_EXAM_QUESTIONS_KEY);
+      if (!importedQuestions) throw new Error("Data soal impor tidak ditemukan. Ulangi proses import.");
+      return {
+        questions: mapImportedQuestionsToExamDraft(JSON.parse(importedQuestions)),
+        error: "",
+      };
+    } catch (requestError) {
+      return {
+        questions: null,
+        error: `Soal impor tidak dapat dimuat: ${requestError.message}`,
+      };
+    }
+  });
   const [step, setStep] = useState(0);
   const [classes, setClasses] = useState([]);
   const [subjects, setSubjects] = useState([]);
@@ -1099,7 +1120,7 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
   const [saving, setSaving] = useState(false);
   const [savingToken, setSavingToken] = useState(false);
   const [tokenNotice, setTokenNotice] = useState("");
-  const [error, setError] = useState("");
+  const [error, setError] = useState(importedExamDraft.error);
   const [token, setToken] = useState("");
   const [copiedToken, setCopiedToken] = useState(false);
   const [editToken, setEditToken] = useState("");
@@ -1125,8 +1146,12 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
     randomizeOptions: false,
     autoGrade: true,
     showScore: true,
-    questions: [createQuestionDraft()],
+    questions: importedExamDraft.questions ?? [createQuestionDraft()],
   });
+
+  useEffect(() => {
+    if (fromImport) sessionStorage.removeItem(IMPORTED_EXAM_QUESTIONS_KEY);
+  }, [fromImport]);
 
   useEffect(() => {
     let active = true;
@@ -1535,9 +1560,11 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
     <TeacherShell active="Soal" user={user}>
       <a className="teacher-back-link" href={returnToSchedule ? "/guru/jadwal-ujian" : "/guru/soal"}><TeacherIcon name="back" /> Kembali ke {returnToSchedule ? "Jadwal Ujian" : "Soal"}</a>
       <PageTitle
-        eyebrow={isEditing ? "EDIT UJIAN" : "BUAT SOAL"}
-        title={isEditing ? "Edit Ujian" : "Buat Soal Baru"}
-        description="Lengkapi informasi ujian, kelas peserta, jadwal, dan daftar soal."
+        eyebrow={isEditing ? "EDIT UJIAN" : fromImport ? "IMPORT SOAL KE UJIAN" : "BUAT SOAL"}
+        title={isEditing ? "Edit Ujian" : fromImport ? "Buat Ujian dari Import" : "Buat Soal Baru"}
+        description={fromImport
+          ? "Soal hasil import sudah terisi. Lengkapi judul, kelas, jadwal, dan pengaturan ujian."
+          : "Lengkapi informasi ujian, kelas peserta, jadwal, dan daftar soal."}
       />
       <nav className="teacher-wizard-steps" aria-label="Langkah pembuatan soal">
         {wizardSteps.map((label, index) => (
@@ -1552,12 +1579,18 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
           <>
             <div className="teacher-panel-heading"><div><span>LANGKAH 1</span><h2>Pilih Tipe Soal</h2></div></div>
             {isEditing ? <p className="teacher-wizard-help">Tipe tiap pertanyaan mengikuti data ujian dan dapat diubah pada langkah Input Soal.</p> : <div className="teacher-choice-cards">
-              {[["multiple_choice", "Pilihan Ganda", "Siswa memilih satu jawaban dari lima opsi."], ["essay", "Essay", "Siswa menulis jawaban dengan kata-kata sendiri."]].map(([value, title, description]) => (
+              {[
+                ["multiple_choice", "Pilihan Ganda", "Siswa memilih satu jawaban dari lima opsi."],
+                ...(!importedExamDraft.questions
+                  ? [["essay", "Essay", "Siswa menulis jawaban dengan kata-kata sendiri."]]
+                  : []),
+              ].map(([value, title, description]) => (
                 <label className={form.type === value ? "selected" : ""} key={value}>
                   <input type="radio" name="question-type" checked={form.type === value} onChange={() => setForm({ ...form, type: value })} />
                   <span><strong>{title}</strong><small>{description}</small></span>
                 </label>
               ))}
+              {importedExamDraft.questions && <p className="teacher-wizard-help">Tipe Pilihan Ganda dipilih otomatis karena soal impor memiliki opsi A-E.</p>}
             </div>}
           </>
         )}
@@ -2030,6 +2063,14 @@ function QuestionImport({ user }) {
     setQuestions(parsed.questions);
     setErrors(parsed.errors);
   }
+  function continueToExam() {
+    try {
+      sessionStorage.setItem(IMPORTED_EXAM_QUESTIONS_KEY, JSON.stringify(questions));
+      window.location.assign("/guru/soal/baru?fromImport=1");
+    } catch (requestError) {
+      setErrors([`Soal tidak dapat diteruskan ke wizard ujian: ${requestError.message}`]);
+    }
+  }
   async function saveImport() {
     setSaving(true);
     setErrors([]);
@@ -2047,7 +2088,7 @@ function QuestionImport({ user }) {
   }
   return (
     <TeacherShell active="Soal" user={user}>
-      <PageTitle eyebrow="BANK SOAL · IMPORT MASSAL" title="Import Soal" description="Tempel beberapa soal sekaligus. Periksa preview sebelum menyimpannya." />
+      <PageTitle eyebrow="IMPORT SOAL" title="Import Soal" description="Periksa preview, lalu teruskan soal ke wizard ujian atau simpan ke Bank Soal." />
       {notice && <div className="teacher-alert success" role="status">{notice}</div>}
       {errors.map((error) => <div className="teacher-alert error" role="alert" key={error}>{error}</div>)}
       <form className="teacher-panel teacher-import-panel" onSubmit={preview}>
@@ -2071,7 +2112,11 @@ function QuestionImport({ user }) {
           <strong>{index + 1}. {question.prompt}</strong>
           {question.options.map((option) => <span className={option.isCorrect ? "correct" : ""} key={option.label}>{option.label}. {option.content}{option.isCorrect ? " · Kunci" : ""}</span>)}
         </article>)}
-        <button className="teacher-primary-button" type="button" disabled={saving || errors.length > 0} onClick={saveImport}>{saving ? "Menyimpan..." : "Simpan Semua Soal"}</button>
+        <div className="teacher-title-actions">
+          <button className="teacher-primary-button" type="button" disabled={saving || errors.length > 0} onClick={continueToExam}>Lanjut Buat Ujian</button>
+          <button className="teacher-secondary-button" type="button" disabled={saving || errors.length > 0} onClick={saveImport}>{saving ? "Menyimpan..." : "Simpan ke Bank Soal"}</button>
+        </div>
+        <p className="teacher-wizard-help">Jika lanjut ke ujian, soal akan disimpan saat ujian dipublikasikan. Untuk menyimpan tanpa membuat ujian, pilih Bank Soal.</p>
       </section>}
     </TeacherShell>
   );

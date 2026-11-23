@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { parseImportedQuestions } from "./question-import.js";
+import {
+  mapImportedQuestionsToExamDraft,
+  parseImportedQuestions,
+} from "./question-import.js";
 
 test("keeps numbered reaction steps inside one question", () => {
   const text = `24. Perhatikan reaksi berikut:
@@ -50,4 +53,24 @@ Kunci: B`;
   assert.equal(questions.length, 2);
   assert.match(questions[0].prompt, /2\) Langkah dua/);
   assert.equal(questions[1].answerKey, "B");
+});
+
+test("maps imported multiple-choice questions into the exam wizard format", () => {
+  const { questions } = parseImportedQuestions(`24. Perhatikan reaksi berikut:
+1) H2C=CH2 + H2 -> H3C-CH3
+A. Pilihan satu
+B. Pilihan dua
+C. Pilihan tiga
+D. Pilihan empat
+E. Pilihan lima
+Kunci: D`);
+
+  assert.deepEqual(mapImportedQuestionsToExamDraft(questions), [{
+    type: "multiple_choice",
+    prompt: "24. Perhatikan reaksi berikut: 1) H2C=CH2 + H2 -> H3C-CH3",
+    options: ["Pilihan satu", "Pilihan dua", "Pilihan tiga", "Pilihan empat", "Pilihan lima"],
+    correctOption: "D",
+    answerKey: "",
+    points: 1,
+  }]);
 });

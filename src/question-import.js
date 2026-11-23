@@ -1,3 +1,34 @@
+export const IMPORTED_EXAM_QUESTIONS_KEY = "nsolve-imported-exam-questions";
+
+export function mapImportedQuestionsToExamDraft(questions) {
+  if (!Array.isArray(questions) || questions.length === 0) {
+    throw new Error("Tidak ada soal impor untuk dimasukkan ke ujian.");
+  }
+  return questions.map((question, index) => {
+    if (!question || typeof question.prompt !== "string" ||
+        !Array.isArray(question.options)) {
+      throw new Error(`Format soal impor ke-${index + 1} tidak valid.`);
+    }
+    const options = ["A", "B", "C", "D", "E"].map((label) =>
+      question.options.find((option) => option.label === label)?.content ?? "",
+    );
+    const correctOption = question.answerKey?.toUpperCase();
+    if (question.prompt.trim().length < 10 ||
+        options.some((option) => !option.trim()) ||
+        !["A", "B", "C", "D", "E"].includes(correctOption)) {
+      throw new Error(`Soal impor ke-${index + 1} belum lengkap.`);
+    }
+    return {
+      type: "multiple_choice",
+      prompt: question.prompt,
+      options,
+      correctOption,
+      answerKey: "",
+      points: 1,
+    };
+  });
+}
+
 export function parseImportedQuestions(text) {
   let normalized = text
     .replace(/\r/g, "")
