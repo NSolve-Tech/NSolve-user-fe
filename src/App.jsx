@@ -13,7 +13,7 @@ import TeacherPages, { TeacherShell } from "./TeacherPages.jsx";
 import AuthPage from "./AuthPages.jsx";
 import { studentApi } from "./student-api.js";
 
-const AdminPanel = React.lazy(() => import("../../NSolve-admin-fe/src/App.jsx"));
+const AdminPanel = React.lazy(() => import("./admin/App.jsx"));
 
 const subjectIcons = {
   kimia: chemistryIcon,
