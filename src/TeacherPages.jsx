@@ -878,7 +878,7 @@ function QuestionDetail({ user, questionId }) {
     return () => { active = false; };
   }, [questionId]);
   async function removeQuestion() {
-    if (!window.confirm("Hapus soal ini dari bank soal?")) return;
+    if (!window.confirm("Hapus soal ini dari bank soal? Soal yang sudah disalin ke paket ujian tetap ada di paket tersebut.")) return;
     setDeleting(true);
     setError("");
     try {
@@ -922,7 +922,7 @@ function ExamList({ user, schedule = false }) {
     return () => { active = false; };
   }, []);
   async function removeExam(examId) {
-    if (!window.confirm("Hapus paket ujian ini beserta soal yang terpasang?")) return;
+    if (!window.confirm("Hapus paket ujian ini? Semua soal dan sumbernya dari bank (termasuk yang dipakai ulang), jawaban, hasil, aktivitas, dan permintaan remedial terkait akan dihapus permanen.")) return;
     setError("");
     try {
       await teacherApi.deleteExam(examId);
@@ -2109,8 +2109,8 @@ function QuestionImport({ user }) {
       {questions.length > 0 && <section className="teacher-panel teacher-import-preview">
         <div className="teacher-panel-heading"><div><span>PREVIEW IMPORT SOAL</span><h2>{questions.length} soal siap diperiksa</h2></div></div>
         {questions.map((question, index) => <article key={`${index}-${question.prompt}`}>
-          <strong>{index + 1}. {question.prompt}</strong>
-          {question.options.map((option) => <span className={option.isCorrect ? "correct" : ""} key={option.label}>{option.label}. {option.content}{option.isCorrect ? " · Kunci" : ""}</span>)}
+          <strong className="nsolve-preserve-lines">{index + 1}. {question.prompt}</strong>
+          {question.options.map((option) => <span className={`${option.isCorrect ? "correct " : ""}nsolve-preserve-lines`} key={option.label}>{option.label}. {option.content}{option.isCorrect ? " · Kunci" : ""}</span>)}
         </article>)}
         <div className="teacher-title-actions">
           <button className="teacher-primary-button" type="button" disabled={saving || errors.length > 0} onClick={continueToExam}>Lanjut Buat Ujian</button>

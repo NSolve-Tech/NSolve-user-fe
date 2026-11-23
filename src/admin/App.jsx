@@ -382,7 +382,12 @@ function UserPage({ role, title, currentUser, schoolName }) {
     }
   }
   async function deleteUser(item) {
-    if (!window.confirm(`Hapus akun ${item.fullName}? Jika memiliki riwayat, akun harus dinonaktifkan.`)) return;
+    const consequences = item.role === "student"
+      ? "Akun, sesi login, dan seluruh riwayat ujian siswa ini akan dihapus permanen."
+      : item.role === "teacher"
+        ? "Akun guru, soal buatannya, ujian yang dikelola, dan seluruh riwayat terkait akan dihapus permanen."
+        : "Akun dan sesi login akan dihapus permanen.";
+    if (!window.confirm(`Hapus akun ${item.fullName}? ${consequences}`)) return;
     setError("");
     setNotice("");
     try {
@@ -459,7 +464,7 @@ function ClassesPage() {
     finally { setSaving(false); }
   }
   async function remove(item) {
-    if (!window.confirm(`Hapus kelas ${item.name}?`)) return;
+    if (!window.confirm(`Hapus kelas ${item.name}? Data penugasan kelas untuk siswa dan guru serta target kelas pada ujian akan dihapus. Akun siswa, guru, dan paket ujian tetap ada.`)) return;
     try {
       await adminApi.deleteClass(item.id); setClasses((current) => current.filter((value) => value.id !== item.id));
       setNotice("Kelas berhasil dihapus."); setError("");
@@ -467,7 +472,7 @@ function ClassesPage() {
   }
   return <>
     <Alert error={error} notice={notice} />
-    <div className="toolbar"><p>Kelola kelas sekolah. Kelas yang masih dipakai siswa atau ujian tidak dapat dihapus.</p><button className="primary" onClick={() => setEditing({ id: null, name: "", gradeLevel: "X" })}>+ Tambah Kelas</button></div>
+    <div className="toolbar"><p>Menghapus kelas juga menghapus penugasan siswa/guru dan target kelas pada ujian, tetapi tidak menghapus akun atau paket ujiannya.</p><button className="primary" onClick={() => setEditing({ id: null, name: "", gradeLevel: "X" })}>+ Tambah Kelas</button></div>
     <section className="panel table-panel"><div className="table-scroll"><table><thead><tr><th>Kelas</th><th>Jenjang</th><th>Jumlah Siswa</th><th>Jumlah Guru</th><th>Aksi</th></tr></thead><tbody>
       {classes.map((item) => <tr key={item.id}><td><strong>{item.name}</strong></td><td>{item.gradeLevel}</td><td>{item.studentCount}</td><td>{item.teacherCount}</td><td><div className="row-actions"><button className="secondary" onClick={() => setEditing({ ...item })}>Edit</button><button className="danger" onClick={() => remove(item)}>Hapus</button></div></td></tr>)}
       {!loading && !classes.length && <tr><td colSpan="5">Belum ada kelas.</td></tr>}
@@ -504,7 +509,7 @@ function SubjectsPage() {
     } catch (requestError) { setError(requestError.message); }
   }
   async function remove(item) {
-    if (!window.confirm(`Hapus mata pelajaran ${item.name}?`)) return;
+    if (!window.confirm(`Hapus mata pelajaran ${item.name}? Soal, paket ujian, dan seluruh riwayat ujian terkait akan dihapus permanen. Akun guru tetap ada dan mapelnya diubah menjadi Umum.`)) return;
     try {
       await adminApi.deleteSubject(item.id); setSubjects((current) => current.filter((value) => value.id !== item.id));
       setNotice("Mata pelajaran berhasil dihapus."); setError("");
@@ -512,7 +517,7 @@ function SubjectsPage() {
   }
   return <>
     <Alert error={error} notice={notice} />
-    <div className="toolbar"><p>Data mata pelajaran digunakan pada profil guru dan pembuatan ujian.</p><button className="primary" onClick={() => setEditing({ id: null, name: "" })}>+ Tambah Mata Pelajaran</button></div>
+    <div className="toolbar"><p>Menghapus mata pelajaran juga menghapus soal dan paket ujian terkait beserta riwayatnya. Akun guru tetap ada tanpa mapel tersebut.</p><button className="primary" onClick={() => setEditing({ id: null, name: "" })}>+ Tambah Mata Pelajaran</button></div>
     <section className="panel table-panel"><div className="table-scroll"><table><thead><tr><th>Mata Pelajaran</th><th>Guru Pengampu</th><th>Aksi</th></tr></thead><tbody>
       {subjects.map((item) => <tr key={item.id}><td><strong>{item.name}</strong></td><td>{item.teacherCount}</td><td><div className="row-actions"><button className="secondary" onClick={() => setEditing({ ...item })}>Edit</button><button className="danger" onClick={() => remove(item)}>Hapus</button></div></td></tr>)}
       {!loading && !subjects.length && <tr><td colSpan="3">Belum ada mata pelajaran.</td></tr>}
@@ -633,16 +638,14 @@ function SchoolsPage({ schools, selectedSchoolId, onSchoolsChange, onSchoolChang
 
   async function remove(school) {
     const confirmed = window.confirm(
-      `Hapus sekolah ${school.name}? Jika sekolah memiliki data, sekolah akan dinonaktifkan agar riwayat tetap aman.`,
+      `Hapus sekolah ${school.name}? Seluruh akun, kelas, mata pelajaran, soal, ujian, dan riwayat sekolah ini akan dihapus permanen.`,
     );
     if (!confirmed) return;
     setError(""); setNotice("");
     try {
       const result = await adminApi.deleteSchool(school.id);
       await refresh();
-      setNotice(result.deactivated
-        ? "Sekolah memiliki data terkait, sehingga dinonaktifkan dan seluruh datanya dipertahankan."
-        : "Sekolah kosong berhasil dihapus.");
+      setNotice(result.deleted ? "Sekolah dan seluruh datanya berhasil dihapus." : "");
     } catch (requestError) { setError(requestError.message); }
   }
 
