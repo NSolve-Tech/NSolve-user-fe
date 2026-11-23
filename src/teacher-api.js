@@ -3,6 +3,7 @@ import { request } from "./student-api.js";
 export const teacherApi = {
   getDashboard: () => request("/api/teacher/dashboard"),
   getProfile: () => request("/api/teacher/profile"),
+  getSubjects: () => request("/api/teacher/subjects"),
   updateProfile: (data) => request("/api/teacher/profile", { method: "PUT", body: data }),
   getQuestions: (filters = {}) => {
     const query = new URLSearchParams(

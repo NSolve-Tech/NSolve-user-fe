@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { adminApi, setAdminSchoolId } from "./api.js";
+import dashboardLogo from "../icon.png";
 import "./styles.css";
 
 const navigation = [
@@ -64,7 +65,7 @@ function Login({ onLogin }) {
   }
   return <main className="login-page">
     <form className="login-card" onSubmit={submit}>
-      <div className="login-brand"><span>N</span><strong>NSolve-Tech</strong></div>
+      <div className="login-brand"><img src={dashboardLogo} alt="Logo NSolve-Tech" /><strong>NSolve-Tech</strong></div>
       <p>WORKSPACE ADMIN</p>
       <h1>Masuk ke Dashboard Admin</h1>
       <label>Email<input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
@@ -91,8 +92,8 @@ function Shell({
   return <div className="admin-app">
     <aside className="admin-sidebar">
       <a className="brand" href={scopedPath(basePath, "/")}>
-        <span className="brand-logo">N</span>
-        <span><strong>NSolve-Tech</strong><small>PORTAL SEKOLAH</small></span>
+        <img className="brand-logo" src={dashboardLogo} alt="Logo NSolve-Tech" />
+        <span><strong>NSolve-Tech</strong><small>PORTAL ADMIN</small></span>
       </a>
       <div className="workspace-label">WORKSPACE ADMIN</div>
       <nav aria-label="Navigasi admin">
@@ -733,26 +734,60 @@ function AdminProfile({ user, onProfileUpdated }) {
 
 function ActivityPage() {
   const [events, setEvents] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [error, setError] = useState("");
   useEffect(() => {
     let active = true;
     async function poll() {
       try {
-        const { events: values } = await adminApi.activity();
-        if (active) { setEvents(values); setError(""); }
+        const { events: values, sessions: activeSessions = [] } = await adminApi.activity();
+        if (active) {
+          setEvents(values);
+          setSessions(activeSessions);
+          setError("");
+        }
       } catch (requestError) { if (active) setError(requestError.message); }
       if (active) window.setTimeout(poll, 15_000);
     }
     poll();
     return () => { active = false; };
   }, []);
-  return <section className="panel table-panel"><div className="panel-heading"><div><span>PEMANTAUAN AKTIVITAS</span><h2>Pengawasan Ujian</h2></div></div>
-    <Alert error={error} />
-    <div className="table-scroll"><table><thead><tr><th>Siswa</th><th>Kelas</th><th>Ujian</th><th>Aktivitas</th><th>Pelanggaran</th><th>Waktu</th></tr></thead><tbody>
-      {events.map((event) => <tr key={event.id}><td>{event.studentName}</td><td>{event.className ?? "—"}</td><td>{event.examTitle}</td><td>{event.eventType}</td><td>{event.violationNumber}</td><td>{new Date(event.occurredAt).toLocaleString("id-ID")}</td></tr>)}
-      {!events.length && !error && <tr><td colSpan="6">Belum ada aktivitas yang dilaporkan.</td></tr>}
-    </tbody></table></div>
-  </section>;
+  const eventLabels = {
+    tab_hidden: "Beralih dari halaman ujian",
+    window_blur: "Jendela ujian kehilangan fokus",
+    fullscreen_exit: "Keluar dari mode layar penuh",
+    print_screen: "Tombol PrintScreen terdeteksi",
+    app_closed: "Keluar atau menutup halaman ujian",
+  };
+  return <>
+    <section className="panel table-panel">
+      <div className="panel-heading"><div><span>SESI AKTIF</span><h2>Sesi Ujian Berlangsung</h2></div></div>
+      <Alert error={error} />
+      <div className="table-scroll"><table><thead><tr><th>Siswa</th><th>Kelas</th><th>Ujian</th><th>Mulai</th><th>Status Sesi</th><th>Pelanggaran</th></tr></thead><tbody>
+        {sessions.map((session) => {
+          const frozen = session.lockedUntil && Date.parse(session.lockedUntil) > Date.now();
+          const status = session.disqualifiedAt ? "Perlu verifikasi"
+            : frozen ? "Dibekukan sementara"
+              : session.lastEventType === "app_closed" ? "Halaman ujian ditutup"
+                : "Sedang mengerjakan";
+          return <tr key={session.attemptId}>
+            <td>{session.studentName}</td><td>{session.className ?? "—"}</td>
+            <td>{session.examTitle}</td><td>{new Date(session.startedAt).toLocaleString("id-ID")}</td>
+            <td>{status}{session.lastEventType ? ` · ${eventLabels[session.lastEventType] ?? session.lastEventType} (${new Date(session.lastEventAt).toLocaleString("id-ID")})` : ""}</td>
+            <td>{session.violationCount}</td>
+          </tr>;
+        })}
+        {!sessions.length && !error && <tr><td colSpan="6">Tidak ada sesi ujian yang sedang berlangsung.</td></tr>}
+      </tbody></table></div>
+    </section>
+    <section className="panel table-panel">
+      <div className="panel-heading"><div><span>PEMANTAUAN AKTIVITAS</span><h2>Notifikasi Pelanggaran</h2></div></div>
+      <div className="table-scroll"><table><thead><tr><th>Siswa</th><th>Kelas</th><th>Ujian</th><th>Aktivitas</th><th>Pelanggaran</th><th>Waktu</th></tr></thead><tbody>
+        {events.map((event) => <tr key={event.id}><td>{event.studentName}</td><td>{event.className ?? "—"}</td><td>{event.examTitle}</td><td>{eventLabels[event.eventType] ?? event.eventType}</td><td>{event.violationNumber}</td><td>{new Date(event.occurredAt).toLocaleString("id-ID")}</td></tr>)}
+        {!events.length && !error && <tr><td colSpan="6">Belum ada aktivitas yang dilaporkan.</td></tr>}
+      </tbody></table></div>
+    </section>
+  </>;
 }
 
 export default function App({ basePath = "", initialUser = null, onLogout: onGlobalLogout } = {}) {

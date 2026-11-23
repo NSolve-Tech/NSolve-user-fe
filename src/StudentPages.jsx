@@ -34,43 +34,77 @@ function useExamActivityMonitor(examId, attemptId, enabled, onViolation) {
   useEffect(() => {
     if (!enabled || !examId) return undefined;
     let lastReportedAt = 0;
-    const report = async (eventType) => {
+    let disposed = false;
+    let leavingPage = false;
+    const pendingReports = new Set();
+    const report = async (eventType, { keepalive = false, notify = true } = {}) => {
       const currentTime = Date.now();
-      if (currentTime - lastReportedAt < 2000) return;
+      if (eventType !== "app_closed" && currentTime - lastReportedAt < 2000) return;
       lastReportedAt = currentTime;
       try {
         const activity = await studentApi.reportExamActivity(examId, {
           ...(attemptId ? { attemptId } : {}),
           eventType,
-        });
-        window.navigator.vibrate?.([180, 80, 180]);
-        callbackRef.current?.({ ...activity, eventType });
+        }, keepalive ? { keepalive: true } : undefined);
+        if (notify && !disposed) {
+          window.navigator.vibrate?.([180, 80, 180]);
+          callbackRef.current?.({ ...activity, eventType });
+        }
       } catch (error) {
-        window.navigator.vibrate?.([180, 80, 180]);
-        callbackRef.current?.({ eventType, error: error.message });
+        if (notify && !disposed) {
+          window.navigator.vibrate?.([180, 80, 180]);
+          callbackRef.current?.({ eventType, error: error.message });
+        }
       }
     };
     const onVisibilityChange = () => {
-      if (document.visibilityState === "hidden") report("tab_hidden");
+      if (!leavingPage && document.visibilityState === "hidden") scheduleReport("tab_hidden");
     };
     const onKeyDown = (event) => {
-      if (event.key === "PrintScreen") report("print_screen");
+      if (!leavingPage && event.key === "PrintScreen") report("print_screen");
     };
     const onFullscreenChange = () => {
-      if (!document.fullscreenElement) report("fullscreen_exit");
+      if (!leavingPage && !document.fullscreenElement) scheduleReport("fullscreen_exit");
+    };
+    const scheduleReport = (eventType) => {
+      const timer = window.setTimeout(() => {
+        pendingReports.delete(timer);
+        if (!leavingPage) report(eventType);
+      }, 150);
+      pendingReports.add(timer);
+    };
+    const onBlur = () => { if (!leavingPage) scheduleReport("window_blur"); };
+    const onPageHide = () => {
+      leavingPage = true;
+      for (const timer of pendingReports) window.clearTimeout(timer);
+      pendingReports.clear();
+      if (attemptId) report("app_closed", { keepalive: true, notify: false });
     };
     document.addEventListener("visibilitychange", onVisibilityChange);
     document.addEventListener("fullscreenchange", onFullscreenChange);
     window.addEventListener("keydown", onKeyDown);
-    const onBlur = () => report("window_blur");
     window.addEventListener("blur", onBlur);
+    window.addEventListener("pagehide", onPageHide);
     return () => {
+      disposed = true;
+      for (const timer of pendingReports) window.clearTimeout(timer);
+      pendingReports.clear();
       document.removeEventListener("visibilitychange", onVisibilityChange);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("blur", onBlur);
+      window.removeEventListener("pagehide", onPageHide);
     };
   }, [examId, attemptId, enabled]);
+}
+
+function navigateAfterExam(result) {
+  if (result.showScore === false) {
+    window.alert("Soal Ujian Telah Selesai Dikerjakan");
+    window.location.replace("/");
+    return;
+  }
+  window.location.assign(`/ujian/selesai?id=${encodeURIComponent(result.id)}`);
 }
 
 function ActivityWarning({ activity, onClose, frozen = false }) {
@@ -254,10 +288,11 @@ function ExamPortal({ history = false, user, onLogout, onStartExam, startingExam
     return () => { active = false; };
   }, []);
 
-  const average = results.length
-    ? results.reduce((sum, result) => sum + result.score, 0) / results.length
+  const visibleResults = results.filter((result) => result.showScore !== false && result.score !== null);
+  const average = visibleResults.length
+    ? visibleResults.reduce((sum, result) => sum + result.score, 0) / visibleResults.length
     : 0;
-  const passed = results.filter((result) => result.score >= result.kkm).length;
+  const passed = visibleResults.filter((result) => result.score >= result.kkm).length;
   const activeExamCount = exams.filter((exam) => exam.status === "active" && exam.canStart).length;
 
   return (
@@ -289,9 +324,9 @@ function ExamPortal({ history = false, user, onLogout, onStartExam, startingExam
                 <span>● Data Tersinkronisasi Otomatis</span>
               </div>
               <div className="summary-stats">
-                <article><small>Rata-rata Nilai</small><strong>{average.toFixed(1)}<em> / 100</em></strong><span>Rata-rata hasil tersimpan</span></article>
+                <article><small>Rata-rata Nilai</small><strong>{visibleResults.length ? average.toFixed(1) : "—"}{visibleResults.length > 0 && <em> / 100</em>}</strong><span>{visibleResults.length ? "Dari hasil yang ditampilkan guru" : "Nilai disembunyikan oleh guru"}</span></article>
                 <article><small>Ujian Selesai</small><strong>{results.length} <em>Ujian</em></strong><span>Hasil milik akun Anda</span></article>
-                <article><small>Status Kelulusan</small><strong>{passed} <em>Lulus</em></strong><span>{results.length - passed} perlu remedial</span></article>
+                <article><small>Status Kelulusan</small><strong>{visibleResults.length ? passed : "—"}{visibleResults.length > 0 && <em> Lulus</em>}</strong><span>{visibleResults.length ? `${visibleResults.length - passed} perlu remedial` : "Belum ditampilkan guru"}</span></article>
               </div>
             </section>
             {loading && <p className="student-data-message">Memuat riwayat ujian...</p>}
@@ -301,10 +336,10 @@ function ExamPortal({ history = false, user, onLogout, onStartExam, startingExam
             )}
             <section className="history-list">
               {!loading && !error && results.map((item) => (
-                <article className={`history-card ${item.score < item.kkm ? "remedial" : ""}`} key={item.id}>
+                <article className={`history-card ${item.showScore !== false && item.score < item.kkm ? "remedial" : ""}`} key={item.id}>
                   <div className="history-card-top">
-                    <span className={item.score >= item.kkm ? "pass-tag" : "remedial-tag"}>
-                      {item.score >= item.kkm ? `✓ Lulus KKM (${item.kkm})` : `△ Perlu Remedial (KKM ${item.kkm})`}
+                    <span className={item.showScore === false ? "" : item.score >= item.kkm ? "pass-tag" : "remedial-tag"}>
+                      {item.showScore === false ? "Nilai disembunyikan oleh guru" : item.score >= item.kkm ? `✓ Lulus KKM (${item.kkm})` : `△ Perlu Remedial (KKM ${item.kkm})`}
                     </span>
                     <b>{item.code}</b>
                     <time>{new Date(item.createdAt).toLocaleString("id-ID")}</time>
@@ -314,20 +349,22 @@ function ExamPortal({ history = false, user, onLogout, onStartExam, startingExam
                     <div className="history-description">
                       <h3>{item.subject}: {item.examTitle}</h3>
                       <p>Kode ujian <strong>{item.code}</strong></p>
-                      <div>
+                      {item.showScore !== false ? <div>
                         <span>✓ Benar {item.correctCount} Soal</span><i>·</i>
                         <b>× Salah {item.wrongCount} Soal</b><i>·</i>
                         <span>◷ Kosong {item.unansweredCount} Soal</span>
-                      </div>
+                      </div> : <p>Hasil ujian telah dikumpulkan.</p>}
                     </div>
                     <div className="history-score">
-                      <small>Skor Evaluasi</small>
-                      <strong>{Math.round(item.score)}<em> / 100</em></strong>
-                      <span className={item.score >= item.kkm ? "pass-tag" : "remedial-tag"}>
-                        {item.score >= item.kkm ? "Lulus" : "Perlu Remedial"}
-                      </span>
+                      {item.showScore !== false ? <>
+                        <small>Skor Evaluasi</small>
+                        <strong>{Math.round(item.score)}<em> / 100</em></strong>
+                        <span className={item.score >= item.kkm ? "pass-tag" : "remedial-tag"}>
+                          {item.score >= item.kkm ? "Lulus" : "Perlu Remedial"}
+                        </span>
+                      </> : <span>Nilai belum ditampilkan</span>}
                       <a href={`/ujian/selesai?id=${encodeURIComponent(item.id)}`}>
-                        Lihat Hasil <UiIcon name="arrow" size={15} />
+                        {item.showScore === false ? "Lihat Status" : "Lihat Hasil"} <UiIcon name="arrow" size={15} />
                       </a>
                     </div>
                   </div>
@@ -411,11 +448,12 @@ function GradePage({ user, onLogout }) {
     return () => { active = false; };
   }, []);
 
-  const average = results.length
-    ? results.reduce((sum, result) => sum + result.score, 0) / results.length
+  const visibleResults = results.filter((result) => result.showScore !== false && result.score !== null);
+  const average = visibleResults.length
+    ? visibleResults.reduce((sum, result) => sum + result.score, 0) / visibleResults.length
     : 0;
-  const passed = results.filter((result) => result.score >= result.kkm).length;
-  const remedialResult = results.find((result) => result.score < result.kkm);
+  const passed = visibleResults.filter((result) => result.score >= result.kkm).length;
+  const remedialResult = visibleResults.find((result) => result.score < result.kkm);
 
   async function requestRemedial(resultId) {
     setRequestingId(resultId);
@@ -453,7 +491,7 @@ function GradePage({ user, onLogout }) {
           <section className="grade-results-panel">
             <header className="grade-results-heading">
               <div><h2><UiIcon name="book" /> Rekapitulasi Nilai Ujian</h2><small>{results.length} hasil tersimpan</small></div>
-              <span>Rata-rata {average.toFixed(1)}</span>
+              <span>Rata-rata {visibleResults.length ? average.toFixed(1) : "—"}</span>
             </header>
             {loading && <p className="student-data-message">Memuat nilai...</p>}
             {error && <p className="student-data-message error" role="alert">{error}</p>}
@@ -463,51 +501,55 @@ function GradePage({ user, onLogout }) {
             )}
             <div className="grade-results-grid">
               {results.map((result) => {
-                const isPassed = result.score >= result.kkm;
+                const scoreVisible = result.showScore !== false && result.score !== null;
+                const isPassed = scoreVisible && result.score >= result.kkm;
                 const remedialPending = ["pending", "approved", "scheduled"].includes(result.remedialStatus);
                 const duration = `${Math.floor(result.durationSeconds / 60)} mnt ${result.durationSeconds % 60} dtk`;
                 return (
-                  <article className={`grade-result-card ${isPassed ? "passed" : "remedial"}`} key={result.id}>
+                  <article className={`grade-result-card ${scoreVisible ? isPassed ? "passed" : "remedial" : ""}`} key={result.id}>
                     <header>
                       <div><span className="grade-result-subject">{result.subject}</span><h3>{result.examTitle}</h3></div>
-                      <span className={`grade-result-status ${isPassed ? "passed" : "remedial"}`}>{isPassed ? "Lulus" : "Perlu Remedial"}</span>
+                      <span className={`grade-result-status ${scoreVisible ? isPassed ? "passed" : "remedial" : ""}`}>{scoreVisible ? isPassed ? "Lulus" : "Perlu Remedial" : "Nilai disembunyikan"}</span>
                     </header>
-                    <div className="grade-result-score">
+                    {scoreVisible ? <>
+                      <div className="grade-result-score">
                       <div><small>NILAI AKHIR</small><strong>{Math.round(result.score)}<span>/100</span></strong></div>
                       <span>KKM <b>{result.kkm}</b></span>
-                    </div>
-                    <div className="grade-result-counts">
-                      <span className="correct"><b>{result.correctCount}</b> Benar</span>
-                      <span className="wrong"><b>{result.wrongCount}</b> Salah</span>
-                      <span className="unanswered"><b>{result.unansweredCount}</b> Kosong</span>
-                    </div>
+                      </div>
+                      <div className="grade-result-counts">
+                        <span className="correct"><b>{result.correctCount}</b> Benar</span>
+                        <span className="wrong"><b>{result.wrongCount}</b> Salah</span>
+                        <span className="unanswered"><b>{result.unansweredCount}</b> Kosong</span>
+                      </div>
+                    </> : <p className="student-data-message">Ujian selesai. Nilai belum ditampilkan oleh guru.</p>}
                     <footer>
                       <span>{new Date(result.createdAt).toLocaleString("id-ID")} · {duration}</span>
                       <div>
-                        {!isPassed && <button type="button" className="grade-remedial-button" onClick={() => requestRemedial(result.id)} disabled={requestingId === result.id || remedialPending}>
+                        {scoreVisible && !isPassed && <button type="button" className="grade-remedial-button" onClick={() => requestRemedial(result.id)} disabled={requestingId === result.id || remedialPending}>
                           {requestingId === result.id ? "Mengirim..." : remedialPending ? "Remedial Diajukan" : "Ajukan Remedial"}
                         </button>}
-                        <a href={`/ujian/selesai?id=${encodeURIComponent(result.id)}`}>Lihat Review</a>
+                        <a href={`/ujian/selesai?id=${encodeURIComponent(result.id)}`}>{scoreVisible ? "Lihat Review" : "Lihat Status"}</a>
                       </div>
                     </footer>
                   </article>
                 );
               })}
             </div>
-            {!loading && !error && results.length > 0 && <p className="grade-results-footnote">{passed} dari {results.length} ujian memenuhi KKM.</p>}
+            {!loading && !error && results.length > 0 && <p className="grade-results-footnote">{visibleResults.length ? `${passed} dari ${visibleResults.length} ujian yang nilainya ditampilkan memenuhi KKM.` : "Nilai ujian disembunyikan oleh guru."}</p>}
           </section>
           <aside className="teacher-notes">
             <article className="teacher-note-card">
               <h2><span><UiIcon name="profile" size={16} /></span> Catatan Akademik</h2>
               <small>Ringkasan hasil {user?.fullName ?? "siswa"}</small>
               <blockquote>
-                {results.length
-                  ? `Terdapat ${results.length} hasil ujian dengan rata-rata nilai ${average.toFixed(1)}. ${passed} hasil telah memenuhi KKM.`
+                {visibleResults.length
+                  ? `Terdapat ${results.length} hasil ujian. Rata-rata nilai yang ditampilkan ${average.toFixed(1)} dan ${passed} hasil memenuhi KKM.`
+                  : results.length ? `Terdapat ${results.length} hasil ujian. Nilai disembunyikan oleh guru.`
                   : "Hasil ujian yang sudah dikumpulkan akan tampil di halaman ini."}
               </blockquote>
               <footer>
                 <span>Data diperbarui dari hasil ujian.</span>
-                {results[0] && <a href={`/ujian/selesai?id=${encodeURIComponent(results[0].id)}`}>Hasil terbaru →</a>}
+                {results[0] && <a href={`/ujian/selesai?id=${encodeURIComponent(results[0].id)}`}>Status terbaru →</a>}
               </footer>
             </article>
             <article className="remedial-event">
@@ -516,7 +558,7 @@ function GradePage({ user, onLogout }) {
               <h3>{remedialResult ? remedialResult.subject : "Ketuntasan Nilai"}</h3>
               <p>{remedialResult ? remedialResult.examTitle : "Pantau hasil ujian dan pencapaian KKM Anda."}</p>
               <footer>
-                <span>{remedialResult ? `Skor: ${Math.round(remedialResult.score)}` : `${passed} dari ${results.length} ujian tuntas`}</span>
+                <span>{remedialResult ? `Skor: ${Math.round(remedialResult.score)}` : visibleResults.length ? `${passed} dari ${visibleResults.length} ujian tuntas` : "Nilai disembunyikan oleh guru"}</span>
                 {remedialResult && <a href={`/ujian/selesai?id=${encodeURIComponent(remedialResult.id)}`}>Lihat hasil</a>}
               </footer>
             </article>
@@ -767,7 +809,7 @@ function ExamPage({ drawer = false, search = "", user, onLogout }) {
         if (!currentAttempt) {
           const started = await studentApi.startExam(selectedExamId);
           if (started.result) {
-            window.location.replace(`/ujian/selesai?id=${encodeURIComponent(started.result.id)}`);
+            navigateAfterExam(started.result);
             return;
           }
           currentAttempt = started.attempt;
@@ -823,7 +865,7 @@ function ExamPage({ drawer = false, search = "", user, onLogout }) {
     try {
       await Promise.all(saveQueue.current.values());
       const { result } = await studentApi.submitExam(exam.id, { attemptId: attempt.id });
-      window.location.assign(`/ujian/selesai?id=${encodeURIComponent(result.id)}`);
+      navigateAfterExam(result);
     } catch (requestError) {
       submissionStarted.current = false;
       setSubmitting(false);
@@ -1079,7 +1121,16 @@ function ResultPage({ user, onLogout, search }) {
         {loading && <p className="student-data-message">Memuat hasil ujian...</p>}
         {error && <p className="student-data-message error" role="alert">{error}</p>}
         {!loading && !error && !result && <p className="student-data-message">Belum ada hasil ujian.</p>}
-        {result && <>
+        {result && result.showScore === false && (
+          <section className="teacher-panel student-hidden-result">
+            <span className="result-id">UJIAN SELESAI</span>
+            <h1>Soal Ujian Telah Selesai Dikerjakan</h1>
+            <h2>{result.examTitle}</h2>
+            <p>Guru belum menampilkan nilai untuk ujian ini.</p>
+            <a className="teacher-primary-button" href="/">Kembali ke Dashboard</a>
+          </section>
+        )}
+        {result && result.showScore !== false && <>
           <div className="result-id">●　Review hasil ujian　·　<strong>{result.code}</strong></div>
           <section className="result-hero">
             <div>

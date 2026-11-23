@@ -7,11 +7,9 @@ export class ApiError extends Error {
 }
 
 const configuredApiUrl = import.meta.env.VITE_API_URL;
-if (import.meta.env.PROD && !configuredApiUrl) {
-  throw new Error("VITE_API_URL must be set for production builds.");
-}
-const API_BASE_URL = (configuredApiUrl || "http://localhost:3001")
-  .replace(/\/+$/, "");
+const API_BASE_URL = import.meta.env.PROD
+  ? ""
+  : (configuredApiUrl || "http://localhost:3001").replace(/\/+$/, "");
 
 export async function request(path, { body, ...options } = {}) {
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -62,9 +60,9 @@ export const studentApi = {
     `/api/student/exams/${encodeURIComponent(id)}/submit`,
     { method: "POST", body },
   ),
-  reportExamActivity: (id, body) => request(
+  reportExamActivity: (id, body, options = {}) => request(
     `/api/student/exams/${encodeURIComponent(id)}/activity`,
-    { method: "POST", body },
+    { method: "POST", body, ...options },
   ),
   getResults: () => request("/api/student/results"),
   getResult: (id) => request(`/api/student/results/${encodeURIComponent(id)}`),

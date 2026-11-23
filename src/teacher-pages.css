@@ -651,7 +651,7 @@
   font-size: 9px;
 }
 
-.teacher-empty-state a {
+.teacher-empty-state a:not(.teacher-primary-button) {
   margin-top: 5px;
   color: #176d69;
   font-weight: 700;
@@ -2986,6 +2986,44 @@
 .teacher-schedule-options > label.selected {
   border-color: #68aaa1;
   background: #f1f8f6;
+}
+
+.teacher-score-visibility {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin: 14px 0;
+  padding: 14px 16px;
+  border: 1px solid #e0e7eb;
+  border-radius: 11px;
+  background: #fff;
+  cursor: pointer;
+}
+
+.teacher-score-visibility.selected {
+  border-color: #68aaa1;
+  background: #f1f8f6;
+}
+
+.teacher-score-visibility input {
+  margin-top: 3px;
+  accent-color: #176966;
+}
+
+.teacher-score-visibility span {
+  display: grid;
+  gap: 6px;
+}
+
+.teacher-score-visibility strong {
+  color: #263a4c;
+  font-size: 12px;
+}
+
+.teacher-score-visibility small {
+  color: #72808d;
+  font-size: 10px;
+  line-height: 1.5;
 }
 
 .teacher-choice-cards input,

@@ -1,8 +1,7 @@
 const configuredApiUrl = import.meta.env.VITE_API_URL;
-if (import.meta.env.PROD && !configuredApiUrl) {
-  throw new Error("VITE_API_URL harus diatur untuk build production.");
-}
-const apiBaseUrl = (configuredApiUrl || "http://localhost:3001").replace(/\/+$/, "");
+const apiBaseUrl = import.meta.env.PROD
+  ? ""
+  : (configuredApiUrl || "http://localhost:3001").replace(/\/+$/, "");
 let activeSchoolId = "";
 
 export function setAdminSchoolId(schoolId) {

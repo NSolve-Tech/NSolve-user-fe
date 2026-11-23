@@ -240,7 +240,8 @@ function AdminDashboard({
     tab_hidden: "Beralih dari halaman ujian",
     window_blur: "Jendela ujian kehilangan fokus",
     fullscreen_exit: "Keluar dari mode layar penuh",
-    print_screen: "Tombol screenshot terdeteksi",
+    print_screen: "Tombol PrintScreen terdeteksi",
+    app_closed: "Keluar atau menutup halaman ujian",
   };
   return <TeacherShell
     active={monitorOnly ? "Pengawasan Ujian" : "Dashboard"}
@@ -613,7 +614,7 @@ function initialOptions(type) {
 function QuestionEditor({ user, questionId }) {
   const [form, setForm] = useState({
     academicYear: "2026/2027",
-    subject: "Kimia",
+    subject: "",
     gradeLevel: "XI",
     chapter: "Bilangan Kuantum",
     difficulty: "sedang",
@@ -626,6 +627,26 @@ function QuestionEditor({ user, questionId }) {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(Boolean(questionId));
+  const [subjects, setSubjects] = useState([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(true);
+  useEffect(() => {
+    let active = true;
+    teacherApi.getSubjects()
+      .then(({ subjects: values }) => {
+        if (!active) return;
+        const names = values.map((subject) => subject.name);
+        setSubjects(names);
+        if (!questionId) {
+          setForm((current) => ({
+            ...current,
+            subject: names.includes(current.subject) ? current.subject : names[0] ?? "",
+          }));
+        }
+      })
+      .catch((requestError) => { if (active) setError(requestError.message); })
+      .finally(() => { if (active) setLoadingSubjects(false); });
+    return () => { active = false; };
+  }, [questionId]);
   useEffect(() => {
     if (!questionId) return undefined;
     let active = true;
@@ -690,7 +711,10 @@ function QuestionEditor({ user, questionId }) {
           <div className="teacher-form-grid">
             <label>Sekolah<input value={user?.schoolName ?? "Sekolah"} disabled /></label>
             <label>Tahun Ajaran<input value={form.academicYear} onChange={(event) => setForm({ ...form, academicYear: event.target.value })} required /></label>
-            <label>Mata Pelajaran<select value={form.subject} onChange={(event) => setForm({ ...form, subject: event.target.value })}>{subjectOptions.map((subject) => <option key={subject}>{subject}</option>)}</select></label>
+            <label>Mata Pelajaran<select value={form.subject} onChange={(event) => setForm({ ...form, subject: event.target.value })} required>
+              <option value="" disabled>{loadingSubjects ? "Memuat mata pelajaran..." : "Pilih mata pelajaran"}</option>
+              {subjects.map((subject) => <option key={subject} value={subject}>{subject}</option>)}
+            </select></label>
             <label>Kelas<select value={form.gradeLevel} onChange={(event) => setForm({ ...form, gradeLevel: event.target.value })}><option value="XI">XI</option></select></label>
             <label>Bab<input value={form.chapter} onChange={(event) => setForm({ ...form, chapter: event.target.value })} required /></label>
             <label>Tingkat Kesulitan<select value={form.difficulty} onChange={(event) => setForm({ ...form, difficulty: event.target.value })}><option value="mudah">Mudah</option><option value="sedang">Sedang</option><option value="sulit">Sulit</option></select></label>
@@ -924,18 +948,6 @@ function ExamList({ user, schedule = false }) {
   );
 }
 
-const subjectOptions = [
-  "Kimia",
-  "Fisika",
-  "Matematika",
-  "Biologi",
-  "Bahasa Indonesia",
-  "Bahasa Inggris",
-  "PPKN",
-  "Ekonomi",
-  "Sejarah",
-  "Informatika",
-];
 const wizardSteps = [
   "Tipe Soal",
   "Mata Pelajaran",
@@ -964,9 +976,11 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
   const remedialRequestId = new URLSearchParams(window.location.search).get("remedialRequestId");
   const [step, setStep] = useState(0);
   const [classes, setClasses] = useState([]);
+  const [subjects, setSubjects] = useState([]);
   const [selectedClassIds, setSelectedClassIds] = useState([]);
   const [activeClassGrade, setActiveClassGrade] = useState("X");
   const [loadingClasses, setLoadingClasses] = useState(true);
+  const [loadingSubjects, setLoadingSubjects] = useState(true);
   const [loadingExam, setLoadingExam] = useState(isEditing);
   const [saving, setSaving] = useState(false);
   const [savingToken, setSavingToken] = useState(false);
@@ -996,6 +1010,7 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
     randomizeQuestions: true,
     randomizeOptions: false,
     autoGrade: true,
+    showScore: true,
     questions: [createQuestionDraft()],
   });
 
@@ -1003,13 +1018,15 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
     let active = true;
     Promise.all([
       teacherApi.getAvailableClasses(),
+      teacherApi.getSubjects(),
       isEditing ? teacherApi.getExam(examId) : Promise.resolve(null),
       remedialRequestId
         ? teacherApi.getRemedialRequests()
         : Promise.resolve({ requests: [] }),
     ])
-      .then(([classData, examData, remedialData]) => {
+      .then(([classData, subjectData, examData, remedialData]) => {
         if (!active) return;
+        setSubjects(subjectData.subjects.map((subject) => subject.name));
         const availableClasses = classData.classes.filter((item) => {
           const match = item.name.match(/^(X|XI|XII) (\d{1,2})$/);
           if (!match) return false;
@@ -1046,6 +1063,7 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
             randomizeQuestions: value.randomizeQuestions,
             randomizeOptions: value.randomizeOptions,
             autoGrade: value.autoGrade,
+            showScore: value.showScore !== false,
             questions: value.questions.map((question) => {
               const isEssay = ["essay", "short_answer"].includes(question.type);
               return {
@@ -1084,6 +1102,7 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
       .finally(() => {
         if (!active) return;
         setLoadingClasses(false);
+        setLoadingSubjects(false);
         setLoadingExam(false);
       });
     return () => { active = false; };
@@ -1273,6 +1292,7 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
           gradeLevel,
           durationMinutes: Number(form.durationMinutes),
           kkm: Number(form.kkm),
+          showScore: form.showScore,
           mcQuestionCount,
           essayQuestionCount,
           randomizeQuestions: form.randomizeQuestions,
@@ -1316,6 +1336,7 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
           gradeLevel,
           durationMinutes: Number(form.durationMinutes),
           kkm: Number(form.kkm),
+          showScore: form.showScore,
           mcQuestionCount,
           essayQuestionCount,
           questionIds,
@@ -1388,12 +1409,14 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
         {step === 1 && (
           <>
             <div className="teacher-panel-heading"><div><span>LANGKAH 2</span><h2>Pilih Mata Pelajaran</h2></div></div>
-            <label className="teacher-wizard-label">Mata Pelajaran
-              <select value={form.subject} onChange={(event) => setForm({ ...form, subject: event.target.value })} required>
-                <option value="" disabled>Pilih mata pelajaran</option>
-                {subjectOptions.map((subject) => <option key={subject}>{subject}</option>)}
-              </select>
-            </label>
+            {loadingSubjects ? <p className="teacher-empty">Memuat mata pelajaran sekolah...</p>
+              : subjects.length === 0 ? <div className="teacher-empty-state"><strong>Belum ada mata pelajaran</strong><span>Minta Admin menambahkan mata pelajaran terlebih dahulu.</span></div>
+                : <label className="teacher-wizard-label">Mata Pelajaran
+                  <select value={form.subject} onChange={(event) => setForm({ ...form, subject: event.target.value })} required>
+                    <option value="" disabled>Pilih mata pelajaran</option>
+                    {subjects.map((subject) => <option key={subject} value={subject}>{subject}</option>)}
+                  </select>
+                </label>}
           </>
         )}
         {step === 2 && (
@@ -1471,6 +1494,10 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
             </label>
             <label className="teacher-wizard-label">KKM
               <input type="number" min="0" max="100" step="1" value={form.kkm} onChange={(event) => setForm({ ...form, kkm: event.target.value })} required />
+            </label>
+            <label className={`teacher-score-visibility ${form.showScore ? "selected" : ""}`}>
+              <input type="checkbox" checked={form.showScore} onChange={(event) => setForm({ ...form, showScore: event.target.checked })} />
+              <span><strong>Tampilkan nilai kepada siswa</strong><small>Jika dinonaktifkan, siswa hanya melihat konfirmasi bahwa ujian selesai.</small></span>
             </label>
             <div className="teacher-wizard-label">
               <span>Urutan Soal</span>
@@ -1591,7 +1618,7 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
         {!token && (
           <div className="teacher-wizard-actions">
             <button type="button" className="teacher-secondary-button" onClick={() => setStep((current) => Math.max(current - 1, 0))} disabled={step === 0 || (!isEditing && Boolean(draftExamId))}>Kembali</button>
-            {step < 8 && <button type="button" className="teacher-primary-button" onClick={continueToNextStep} disabled={step === 3 && (loadingClasses || classes.length === 0)}>Lanjut</button>}
+            {step < 8 && <button type="button" className="teacher-primary-button" onClick={continueToNextStep} disabled={(step === 1 && (loadingSubjects || !subjects.length || !form.subject)) || (step === 3 && (loadingClasses || classes.length === 0))}>Lanjut</button>}
           </div>
         )}
       </section>
@@ -2010,7 +2037,7 @@ function TeacherParticipants({ user }) {
     {error && <div className="teacher-alert error" role="alert">{error}</div>}
     <section className="teacher-panel teacher-results-table"><div className="teacher-table-scroll"><table><thead><tr><th>Nama Siswa</th><th>Email</th><th>Kelas</th><th>Paket Ujian</th><th>Status</th><th>Nilai</th></tr></thead><tbody>
       {participants.map((participant) => <tr key={`${participant.examId}-${participant.studentId}`}><td>{participant.fullName}</td><td>{participant.email}</td><td>{participant.className}</td><td>{participant.examTitle}</td><td>{participant.status}</td><td>{participant.score ?? "—"}</td></tr>)}
-      {!participants.length && !error && <tr><td colSpan="6">Belum ada peserta yang ditambahkan ke paket ujian.</td></tr>}
+      {!participants.length && !error && <tr><td colSpan="6">Belum ada peserta yang ditambahkan ke NSolve-Tech</td></tr>}
     </tbody></table></div></section>
   </TeacherShell>;
 }
