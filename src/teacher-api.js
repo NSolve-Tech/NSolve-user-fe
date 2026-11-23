@@ -5,26 +5,6 @@ export const teacherApi = {
   getProfile: () => request("/api/teacher/profile"),
   getSubjects: () => request("/api/teacher/subjects"),
   updateProfile: (data) => request("/api/teacher/profile", { method: "PUT", body: data }),
-  getQuestions: (filters = {}) => {
-    const query = new URLSearchParams(
-      Object.entries(filters).filter(([, value]) => value),
-    );
-    return request(`/api/teacher/questions${query.size ? `?${query}` : ""}`);
-  },
-  getQuestion: (id) => request(`/api/teacher/questions/${encodeURIComponent(id)}`),
-  createQuestion: (data) => request("/api/teacher/questions", { method: "POST", body: data }),
-  updateQuestion: (id, data) => request(
-    `/api/teacher/questions/${encodeURIComponent(id)}`,
-    { method: "PUT", body: data },
-  ),
-  deleteQuestion: (id) => request(
-    `/api/teacher/questions/${encodeURIComponent(id)}`,
-    { method: "DELETE" },
-  ),
-  importQuestions: (questions) => request(
-    "/api/teacher/questions/import",
-    { method: "POST", body: { questions } },
-  ),
   getClasses: () => request("/api/teacher/classes"),
   getAvailableClasses: () => request("/api/teacher/available-classes"),
   getParticipants: () => request("/api/teacher/participants"),

@@ -19,7 +19,6 @@ const questionTypes = [
   ["essay", "Essay"],
 ];
 const typeNames = Object.fromEntries(questionTypes);
-const difficultyNames = { mudah: "Mudah", sedang: "Sedang", sulit: "Sulit" };
 
 function TeacherIcon({ name }) {
   const paths = {
@@ -550,7 +549,6 @@ function TeacherDashboard({ user }) {
       {requestError && <div className="teacher-alert error" role="alert">{requestError}</div>}
       <section className="teacher-stat-grid" aria-label="Statistik guru">
         {[
-          ["Total Soal", stats?.totalQuestions, "questions"],
           ["Total Ujian", stats?.totalExams, "exam"],
           ["Total Peserta", stats?.totalStudents, "students"],
           ["Ujian Aktif", stats?.activeExams, "calendar"],
@@ -643,268 +641,6 @@ function statusName(status) {
     active: "Aktif",
     completed: "Selesai",
   })[status] ?? status;
-}
-
-function QuestionBank({ user }) {
-  const [questions, setQuestions] = useState([]);
-  const [filters, setFilters] = useState({
-    subject: "Kimia",
-    gradeLevel: "",
-    chapter: "",
-    search: "",
-    difficulty: "",
-    page: 1,
-  });
-  const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  useEffect(() => {
-    let active = true;
-    setLoading(true);
-    teacherApi.getQuestions(filters)
-      .then(({ questions: values, pagination: pageInfo }) => {
-        if (active) {
-          setQuestions(values);
-          setPagination(pageInfo);
-        }
-      })
-      .catch((requestError) => { if (active) setError(requestError.message); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [filters]);
-  const chapters = useMemo(() => [...new Set(questions.map((question) => question.chapter))], [questions]);
-  return (
-    <TeacherShell active="Soal" user={user}>
-      <PageTitle
-        eyebrow="MATERI PEMBELAJARAN"
-        title="Bank Soal"
-        description="Cari dan kelola soal Kimia kelas XI."
-        action={<div className="teacher-title-actions"><a className="teacher-secondary-button" href="/guru/import-soal"><TeacherIcon name="import" /> Import Soal</a><a className="teacher-primary-button" href="/guru/soal/baru"><TeacherIcon name="create" /> Tambah Soal</a></div>}
-      />
-      <section className="teacher-filter-panel">
-        <label>Mata Pelajaran<select value="Kimia" disabled><option>Kimia</option></select></label>
-        <label>Kelas<select value={filters.gradeLevel} onChange={(event) => setFilters({ ...filters, gradeLevel: event.target.value, page: 1 })}><option value="">Semua Kelas</option><option value="XI">XI</option></select></label>
-        <label>Materi<select value={filters.chapter} onChange={(event) => setFilters({ ...filters, chapter: event.target.value, page: 1 })}><option value="">Semua Materi</option>{chapters.map((chapter) => <option key={chapter}>{chapter}</option>)}</select></label>
-        <label>Kesulitan<select value={filters.difficulty} onChange={(event) => setFilters({ ...filters, difficulty: event.target.value, page: 1 })}><option value="">Semua tingkat</option><option value="mudah">Mudah</option><option value="sedang">Sedang</option><option value="sulit">Sulit</option></select></label>
-        <label className="teacher-search"><span>Cari soal</span><div><TeacherIcon name="search" /><input value={filters.search} onChange={(event) => setFilters({ ...filters, search: event.target.value, page: 1 })} placeholder="Cari kata kunci soal..." /></div></label>
-      </section>
-      {error && <div className="teacher-alert error" role="alert">{error}</div>}
-      <section className="teacher-panel question-bank-panel">
-        <div className="teacher-panel-heading">
-          <div><span>KIMIA · XI</span><h2>Daftar Soal <small>{loading ? "…" : pagination.total}</small></h2></div>
-          <a className="teacher-secondary-button" href="/guru/ujian/baru">Pilih untuk paket SAS</a>
-        </div>
-        {loading ? <p className="teacher-empty">Memuat bank soal...</p> : questions.length === 0 ? (
-          <div className="teacher-empty-state"><TeacherIcon name="questions" /><strong>Soal belum ditemukan</strong><span>Ubah filter pencarian atau tambahkan soal baru.</span><a href="/guru/soal/baru">Tambah soal Kimia</a></div>
-        ) : (
-          <div className="teacher-question-list">
-            {questions.map((question, index) => (
-              <article className="teacher-question-item" key={question.id}>
-                <span className="teacher-question-number">{String((pagination.page - 1) * pagination.pageSize + index + 1).padStart(2, "0")}</span>
-                <div className="teacher-question-main">
-                  <div className="teacher-question-meta"><span>{question.chapter}</span><b className={`difficulty-${question.difficulty}`}>{difficultyNames[question.difficulty]}</b><small>{typeNames[question.type]}</small></div>
-                  <p>{question.prompt}</p>
-                  {question.options.length > 0 && <small className="teacher-option-count">{question.options.length} opsi jawaban</small>}
-                </div>
-                <a className="teacher-icon-button" href={`/guru/soal/${encodeURIComponent(question.id)}`} aria-label={`Lihat soal ${index + 1}`}><TeacherIcon name="eye" /></a>
-              </article>
-            ))}
-          </div>
-        )}
-        {pagination.totalPages > 1 && <div className="teacher-pagination"><button type="button" className="teacher-secondary-button" disabled={pagination.page <= 1} onClick={() => setFilters({ ...filters, page: pagination.page - 1 })}>Sebelumnya</button><span>Halaman {pagination.page} dari {pagination.totalPages}</span><button type="button" className="teacher-secondary-button" disabled={pagination.page >= pagination.totalPages} onClick={() => setFilters({ ...filters, page: pagination.page + 1 })}>Berikutnya</button></div>}
-      </section>
-    </TeacherShell>
-  );
-}
-
-function initialOptions(type) {
-  if (type === "true_false") {
-    return [
-      { label: "Benar", content: "", isCorrect: false },
-      { label: "Salah", content: "", isCorrect: false },
-    ];
-  }
-  if (["short_answer", "essay"].includes(type)) return [];
-  return ["A", "B", "C", "D"].map((label) => ({ label, content: "", isCorrect: false }));
-}
-
-function QuestionEditor({ user, questionId }) {
-  const [form, setForm] = useState({
-    academicYear: "2026/2027",
-    subject: "",
-    gradeLevel: "XI",
-    chapter: "Bilangan Kuantum",
-    difficulty: "sedang",
-    type: "multiple_choice",
-    prompt: "",
-    answerKey: "",
-    explanation: "",
-    options: initialOptions("multiple_choice"),
-  });
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(Boolean(questionId));
-  const [subjects, setSubjects] = useState([]);
-  const [loadingSubjects, setLoadingSubjects] = useState(true);
-  useEffect(() => {
-    let active = true;
-    teacherApi.getSubjects()
-      .then(({ subjects: values }) => {
-        if (!active) return;
-        const names = values.map((subject) => subject.name);
-        setSubjects(names);
-        if (!questionId) {
-          setForm((current) => ({
-            ...current,
-            subject: names.includes(current.subject) ? current.subject : names[0] ?? "",
-          }));
-        }
-      })
-      .catch((requestError) => { if (active) setError(requestError.message); })
-      .finally(() => { if (active) setLoadingSubjects(false); });
-    return () => { active = false; };
-  }, [questionId]);
-  useEffect(() => {
-    if (!questionId) return undefined;
-    let active = true;
-    teacherApi.getQuestion(questionId)
-      .then(({ question }) => {
-        if (active) setForm({
-          academicYear: question.academicYear,
-          subject: question.subject,
-          gradeLevel: question.gradeLevel,
-          chapter: question.chapter,
-          difficulty: question.difficulty,
-          type: question.type,
-          prompt: question.prompt,
-          answerKey: question.answerKey,
-          explanation: question.explanation,
-          options: question.options.map(({ label, content, isCorrect }) => ({ label, content, isCorrect })),
-        });
-      })
-      .catch((requestError) => { if (active) setError(requestError.message); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [questionId]);
-  const optionType = !["short_answer", "essay"].includes(form.type);
-  function changeType(type) {
-    setForm({ ...form, type, options: initialOptions(type), answerKey: "" });
-  }
-  function updateOption(index, changes) {
-    setForm({
-      ...form,
-      options: form.options.map((option, position) => {
-        if (position !== index) return form.type === "multiple_choice" && changes.isCorrect ? { ...option, isCorrect: false } : option;
-        return { ...option, ...changes };
-      }),
-    });
-  }
-  function addOption() {
-    if (form.options.length >= 10) return;
-    const label = String.fromCharCode(65 + form.options.length);
-    setForm({ ...form, options: [...form.options, { label, content: "", isCorrect: false }] });
-  }
-  async function submit(event) {
-    event.preventDefault();
-    setError("");
-    setSaving(true);
-    try {
-      if (questionId) await teacherApi.updateQuestion(questionId, form);
-      else await teacherApi.createQuestion(form);
-      window.location.assign("/guru/bank-soal");
-    } catch (requestError) {
-      setError(requestError.message);
-      setSaving(false);
-    }
-  }
-  return (
-    <TeacherShell active="Soal" user={user}>
-      <PageTitle eyebrow="BANK SOAL · KIMIA" title={questionId ? "Edit Soal" : "Tambah Soal"} description="Soal akan tersimpan di bank soal sekolah dan dapat digunakan ulang." />
-      {error && <div className="teacher-alert error" role="alert">{error}</div>}
-      {loading ? <p className="teacher-empty">Memuat soal...</p> : (
-      <form className="teacher-form-layout" onSubmit={submit}>
-        <section className="teacher-panel teacher-form-panel">
-          <div className="teacher-panel-heading"><div><span>INFORMASI SOAL</span><h2>Detail Materi</h2></div><b className="teacher-required-note">* Wajib diisi</b></div>
-          <div className="teacher-form-grid">
-            <label>Sekolah<input value={user?.schoolName ?? "Sekolah"} disabled /></label>
-            <label>Tahun Ajaran<input value={form.academicYear} onChange={(event) => setForm({ ...form, academicYear: event.target.value })} required /></label>
-            <label>Mata Pelajaran<select value={form.subject} onChange={(event) => setForm({ ...form, subject: event.target.value })} required>
-              <option value="" disabled>{loadingSubjects ? "Memuat mata pelajaran..." : "Pilih mata pelajaran"}</option>
-              {subjects.map((subject) => <option key={subject} value={subject}>{subject}</option>)}
-            </select></label>
-            <label>Kelas<select value={form.gradeLevel} onChange={(event) => setForm({ ...form, gradeLevel: event.target.value })}><option value="XI">XI</option></select></label>
-            <label>Bab<input value={form.chapter} onChange={(event) => setForm({ ...form, chapter: event.target.value })} required /></label>
-            <label>Tingkat Kesulitan<select value={form.difficulty} onChange={(event) => setForm({ ...form, difficulty: event.target.value })}><option value="mudah">Mudah</option><option value="sedang">Sedang</option><option value="sulit">Sulit</option></select></label>
-            <label className="teacher-form-full">Tipe Soal<select value={form.type} onChange={(event) => changeType(event.target.value)}>{questionTypes.map(([value, name]) => <option value={value} key={value}>{name}</option>)}</select></label>
-          </div>
-          <label className="teacher-prompt-label">Pertanyaan<textarea rows="5" minLength="10" maxLength="4000" value={form.prompt} onChange={(event) => setForm({ ...form, prompt: event.target.value })} placeholder="Tuliskan pertanyaan Kimia dengan jelas..." required /></label>
-          {optionType ? (
-            <div className="teacher-options-editor">
-              <div className="teacher-options-heading"><strong>Opsi Jawaban</strong><small>{form.type === "multiple_choice_complex" ? "Pilih semua jawaban benar" : "Tandai satu kunci jawaban"}</small></div>
-              {form.options.map((option, index) => (
-                <div className="teacher-option-edit-row" key={`${form.type}-${index}`}>
-                  <span>{option.label}</span>
-                  <input value={option.content} onChange={(event) => updateOption(index, { content: event.target.value })} placeholder={`Tulis opsi ${option.label}`} required />
-                  <label aria-label={`Tandai ${option.label} sebagai jawaban benar`}>
-                    <input type={form.type === "multiple_choice_complex" ? "checkbox" : "radio"} name="correct-option" checked={option.isCorrect} onChange={(event) => updateOption(index, { isCorrect: event.target.checked })} />
-                    <span>Kunci</span>
-                  </label>
-                </div>
-              ))}
-              {form.type !== "true_false" && <button className="teacher-text-button" type="button" onClick={addOption} disabled={form.options.length >= 10}>+ Tambah opsi</button>}
-            </div>
-          ) : (
-            <label className="teacher-prompt-label">Kunci Jawaban<textarea rows="3" value={form.answerKey} onChange={(event) => setForm({ ...form, answerKey: event.target.value })} required /></label>
-          )}
-          <label className="teacher-prompt-label">Pembahasan <span className="teacher-optional-label">Opsional</span><textarea rows="3" value={form.explanation} onChange={(event) => setForm({ ...form, explanation: event.target.value })} placeholder="Tuliskan pembahasan untuk membantu evaluasi." /></label>
-          <div className="teacher-form-actions"><a className="teacher-secondary-button" href="/guru/bank-soal">Batal</a><button className="teacher-primary-button" type="submit" disabled={saving}>{saving ? "Menyimpan..." : "Simpan ke Bank Soal"}</button></div>
-        </section>
-        <aside className="teacher-panel teacher-form-help"><TeacherIcon name="questions" /><h3>Catatan Penyusunan</h3><p>Gunakan pertanyaan yang sesuai capaian pembelajaran Kimia kelas XI dan sertakan kunci jawaban yang dapat diverifikasi.</p><span>Materi saat ini: {form.chapter || "Belum ditentukan"}</span></aside>
-      </form>
-      )}
-    </TeacherShell>
-  );
-}
-
-function QuestionDetail({ user, questionId }) {
-  const [question, setQuestion] = useState(null);
-  const [error, setError] = useState("");
-  const [deleting, setDeleting] = useState(false);
-  useEffect(() => {
-    let active = true;
-    teacherApi.getQuestion(questionId)
-      .then(({ question: value }) => { if (active) setQuestion(value); })
-      .catch((requestError) => { if (active) setError(requestError.message); });
-    return () => { active = false; };
-  }, [questionId]);
-  async function removeQuestion() {
-    if (!window.confirm("Hapus soal ini dari bank soal? Soal yang sudah disalin ke paket ujian tetap ada di paket tersebut.")) return;
-    setDeleting(true);
-    setError("");
-    try {
-      await teacherApi.deleteQuestion(questionId);
-      window.location.assign("/guru/bank-soal");
-    } catch (requestError) {
-      setError(requestError.message);
-      setDeleting(false);
-    }
-  }
-  return (
-    <TeacherShell active="Soal" user={user}>
-      <a className="teacher-back-link" href="/guru/bank-soal"><TeacherIcon name="back" /> Kembali ke Bank Soal</a>
-      {error && <div className="teacher-alert error" role="alert">{error}</div>}
-      {!question ? <p className="teacher-empty">Memuat soal...</p> : <>
-        <PageTitle eyebrow={`${question.schoolName} · ${question.gradeLevel} · ${question.chapter}`} title="Detail Soal" description={`${question.subject} · ${typeNames[question.type]} · Tingkat ${difficultyNames[question.difficulty]}`} action={<div className="teacher-title-actions"><a className="teacher-secondary-button" href={`/guru/soal/${encodeURIComponent(question.id)}/edit`}>Edit</a><button type="button" className="teacher-danger-button" onClick={removeQuestion} disabled={deleting}>{deleting ? "Menghapus..." : "Hapus"}</button><a className="teacher-primary-button" href="/guru/ujian/baru">Gunakan di Paket Ujian</a></div>} />
-        <section className="teacher-panel teacher-question-detail">
-          <span>Pertanyaan</span>
-          <h2>{question.prompt}</h2>
-          {question.options.length > 0 && <div className="teacher-question-detail-options">{question.options.map((option) => <div className={option.isCorrect ? "correct" : ""} key={option.id}><b>{option.label}</b><span>{option.content}</span>{option.isCorrect && <TeacherIcon name="check" />}</div>)}</div>}
-          {question.answerKey && <div className="teacher-answer-key"><b>Kunci Jawaban</b><p>{question.answerKey}</p></div>}
-          {question.explanation && <div className="teacher-answer-key"><b>Pembahasan</b><p>{question.explanation}</p></div>}
-        </section>
-      </>}
-    </TeacherShell>
-  );
 }
 
 function ExamList({ user, schedule = false }) {
@@ -1127,7 +863,6 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
   const [tokenMode, setTokenMode] = useState("automatic");
   const [examWasPublished, setExamWasPublished] = useState(false);
   const [publishedExam, setPublishedExam] = useState(null);
-  const [savedQuestionIds, setSavedQuestionIds] = useState(null);
   const [draftExamId, setDraftExamId] = useState(null);
   const [form, setForm] = useState({
     type: "multiple_choice",
@@ -1484,7 +1219,6 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
           randomizeOptions: form.randomizeOptions,
           autoGrade: form.autoGrade,
           visibility: form.visibility,
-          questionIds: [],
           classIds: selectedClassIds,
           opensAt: opensAt.toISOString(),
           closesAt: closesAt.toISOString(),
@@ -1503,12 +1237,6 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
         window.location.assign(`/guru/ujian/${examId}`);
         return;
       }
-      let questionIds = savedQuestionIds;
-      if (!questionIds) {
-        const { questions: savedQuestions } = await teacherApi.importQuestions(questionsToSave);
-        questionIds = savedQuestions.map((question) => question.id);
-        setSavedQuestionIds(questionIds);
-      }
       let publishingExamId = draftExamId;
       if (!publishingExamId) {
         const { exam } = await teacherApi.createExam({
@@ -1524,7 +1252,13 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
           showScore: form.showScore,
           mcQuestionCount,
           essayQuestionCount,
-          questionIds,
+          questions: questionsToSave.map(({ type, prompt, answerKey, points, options }) => ({
+            type,
+            prompt,
+            answerKey,
+            points,
+            options,
+          })),
           classIds: selectedClassIds,
           randomizeQuestions: form.randomizeQuestions,
           randomizeOptions: form.randomizeOptions,
@@ -2031,14 +1765,11 @@ function QuestionImport({ user }) {
   const [text, setText] = useState("");
   const [questions, setQuestions] = useState([]);
   const [errors, setErrors] = useState([]);
-  const [notice, setNotice] = useState("");
-  const [saving, setSaving] = useState(false);
   const [readingFile, setReadingFile] = useState(false);
   async function readWordFile(event) {
     const file = event.target.files?.[0];
     if (!file) return;
     setErrors([]);
-    setNotice("");
     setQuestions([]);
     setReadingFile(true);
     try {
@@ -2063,7 +1794,6 @@ function QuestionImport({ user }) {
   }
   function preview(event) {
     event.preventDefault();
-    setNotice("");
     const parsed = parseImportedQuestions(text);
     setQuestions(parsed.questions);
     setErrors(parsed.errors);
@@ -2076,25 +1806,9 @@ function QuestionImport({ user }) {
       setErrors([`Soal tidak dapat diteruskan ke wizard ujian: ${requestError.message}`]);
     }
   }
-  async function saveImport() {
-    setSaving(true);
-    setErrors([]);
-    setNotice("");
-    try {
-      await teacherApi.importQuestions(questions);
-      setNotice(`${questions.length} soal berhasil disimpan ke Bank Soal.`);
-      setQuestions([]);
-      setText("");
-    } catch (requestError) {
-      setErrors([requestError.message]);
-    } finally {
-      setSaving(false);
-    }
-  }
   return (
     <TeacherShell active="Soal" user={user}>
-      <PageTitle eyebrow="IMPORT SOAL" title="Import Soal" description="Periksa preview, lalu teruskan soal ke wizard ujian atau simpan ke Bank Soal." />
-      {notice && <div className="teacher-alert success" role="status">{notice}</div>}
+      <PageTitle eyebrow="IMPORT SOAL" title="Import Soal" description="Periksa preview, lalu teruskan soal untuk langsung dimasukkan ke ujian." />
       {errors.map((error) => <div className="teacher-alert error" role="alert" key={error}>{error}</div>)}
       <form className="teacher-panel teacher-import-panel" onSubmit={preview}>
         <label htmlFor="question-word-file">Unggah file Word (.docx)</label>
@@ -2118,10 +1832,9 @@ function QuestionImport({ user }) {
           {question.options.map((option) => <span className={`${option.isCorrect ? "correct " : ""}nsolve-preserve-lines`} key={option.label}>{option.label}. {option.content}{option.isCorrect ? " · Kunci" : ""}</span>)}
         </article>)}
         <div className="teacher-title-actions">
-          <button className="teacher-primary-button" type="button" disabled={saving || errors.length > 0} onClick={continueToExam}>Lanjut Buat Ujian</button>
-          <button className="teacher-secondary-button" type="button" disabled={saving || errors.length > 0} onClick={saveImport}>{saving ? "Menyimpan..." : "Simpan ke Bank Soal"}</button>
+          <button className="teacher-primary-button" type="button" disabled={errors.length > 0} onClick={continueToExam}>Lanjut Buat Ujian</button>
         </div>
-        <p className="teacher-wizard-help">Jika lanjut ke ujian, soal akan disimpan saat ujian dipublikasikan. Untuk menyimpan tanpa membuat ujian, pilih Bank Soal.</p>
+        <p className="teacher-wizard-help">Soal akan disimpan langsung ke ujian yang dibuat.</p>
       </section>}
     </TeacherShell>
   );
@@ -2283,7 +1996,7 @@ export default function TeacherPages({ path, search = "", user, onLogout }) {
   if (account.role === "admin") {
     return <AdminWorkspace user={account} path={path} />;
   }
-  if (path === "/guru/soal" || path === "/guru/bank-soal") return <ExamList user={account} />;
+  if (path === "/guru/soal") return <ExamList user={account} />;
   if (path === "/guru/soal/baru" || path === "/guru/ujian/baru") return <TeacherExamWizard user={account} />;
   if (path === "/guru/import-soal") return <QuestionImport user={account} />;
   if (path === "/guru/jadwal-ujian" || path === "/guru/paket-ujian") return <ExamList user={account} schedule />;
@@ -2291,10 +2004,6 @@ export default function TeacherPages({ path, search = "", user, onLogout }) {
   if (path === "/guru/hasil-ujian") return <TeacherResults user={account} />;
   if (path === "/guru/data-kelas") return <TeacherClasses user={account} />;
   if (path === "/guru/profil") return <TeacherProfile user={account} />;
-  const questionEditRoute = path.match(/^\/guru\/soal\/([^/]+)\/edit$/);
-  if (questionEditRoute) return <QuestionEditor user={account} questionId={decodeURIComponent(questionEditRoute[1])} />;
-  const questionRoute = path.match(/^\/guru\/soal\/([^/]+)$/);
-  if (questionRoute) return <QuestionDetail user={account} questionId={questionRoute[1]} />;
   const examRoute = path.match(/^\/guru\/ujian\/([^/]+)(?:\/(preview|peserta|analisis|edit))?$/);
   if (examRoute) {
     const [, examId, action] = examRoute;
