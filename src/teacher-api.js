@@ -20,6 +20,9 @@ export const teacherApi = {
   ),
   getExams: () => request("/api/teacher/exams"),
   getExam: (id) => request(`/api/teacher/exams/${encodeURIComponent(id)}`),
+  getExamActivity: (id) => request(
+    `/api/teacher/exams/${encodeURIComponent(id)}/activity`,
+  ),
   createExam: (data) => request("/api/teacher/exams", { method: "POST", body: data }),
   updateExam: (id, data) => request(
     `/api/teacher/exams/${encodeURIComponent(id)}`,

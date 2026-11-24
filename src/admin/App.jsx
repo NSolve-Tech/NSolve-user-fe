@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { adminApi, setAdminSchoolId } from "./api.js";
+import PasswordInput from "../PasswordInput.jsx";
 import dashboardLogo from "../icon.png";
 import "./styles.css";
 
@@ -12,10 +13,11 @@ const navigation = [
   ["Data Kelas", "/kelas", "⌂"],
   ["Data Mata Pelajaran", "/mapel", "▤"],
   ["Data Ujian", "/ujian", "▣"],
+  ["Aktivitas Pengawasan", "/pengawasan", "🛡️"],
   ["Pengaturan", "/pengaturan", "⚙"],
   ["Profil", "/profil", "◉"],
 ];
-const roleLabels = { student: "Student", teacher: "Teacher", admin: "Admin" };
+const roleLabels = { student: "Siswa", teacher: "Guru", admin: "Admin" };
 const pathTitles = {
   "/": "Dashboard",
   "/sekolah": "Sekolah",
@@ -27,7 +29,7 @@ const pathTitles = {
   "/ujian": "Data Ujian",
   "/pengaturan": "Pengaturan",
   "/profil": "Profil Admin",
-  "/pengawasan": "Pengawasan Ujian",
+  "/pengawasan": "Aktivitas Pengawasan",
 };
 
 function initials(name = "") {
@@ -66,10 +68,10 @@ function Login({ onLogin }) {
   return <main className="login-page">
     <form className="login-card" onSubmit={submit}>
       <div className="login-brand"><img src={dashboardLogo} alt="Logo NSolve-Tech" /><strong>NSolve-Tech</strong></div>
-      <p>WORKSPACE ADMIN</p>
+      <p>RUANG KERJA ADMIN</p>
       <h1>Masuk ke Dashboard Admin</h1>
       <label>Email<input type="email" autoComplete="username" value={email} onChange={(event) => setEmail(event.target.value)} required /></label>
-      <label>Kata Sandi<input type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
+      <label>Kata Sandi<PasswordInput autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} required /></label>
       {error && <p className="alert error" role="alert">{error}</p>}
       <button className="primary" type="submit" disabled={loading}>{loading ? "Memeriksa..." : "Masuk"}</button>
     </form>
@@ -95,7 +97,7 @@ function Shell({
         <img className="brand-logo" src={dashboardLogo} alt="Logo NSolve-Tech" />
         <span><strong>NSolve-Tech</strong><small>PORTAL ADMIN</small></span>
       </a>
-      <div className="workspace-label">WORKSPACE ADMIN</div>
+      <div className="workspace-label">RUANG KERJA ADMIN</div>
       <nav aria-label="Navigasi admin">
         {navigation.filter(([, href]) => href !== "/sekolah" || isPlatformAdmin).map(([label, href, icon]) => <a className={path === href ? "active" : ""} href={scopedPath(basePath, href)} key={href}>
           <i aria-hidden="true">{icon}</i><span>{label}</span>
@@ -118,7 +120,7 @@ function Shell({
           </select>
           : schoolName}</div>
         <div className="account">
-          <span><strong>{user.fullName}</strong><small>Administrator</small></span>
+          <span><strong>{user.fullName}</strong><small>Admin</small></span>
           <i>{initials(user.fullName)}</i>
           <button type="button" onClick={onLogout}>⇥ <span>Keluar</span></button>
         </div>
@@ -166,7 +168,7 @@ function Dashboard({ basePath }) {
         ["Ujian", data?.exams, "▣", "/ujian"],
         ["Aktivitas Pengawasan", data?.events, "◈", "/pengawasan"],
       ].map(([label, value, icon, href]) => <a className="stat-card" href={scopedPath(basePath, href)} key={label}>
-        <i>{icon}</i><span><small>{label}</small><strong>{value ?? "—"}</strong></span>
+        <i>{icon}</i><span><small>{label}{label === "Aktivitas Pengawasan"  }</small><strong>{value ?? "—"}</strong></span>
       </a>)}
     </section>
     <section className="panel dashboard-welcome">
@@ -188,7 +190,6 @@ function UserEditor({ item, role, classes, subjects, schoolName, onClose, onSave
     gradeLevel: initialClass?.gradeLevel ?? "X",
     password: "",
     subject: item?.subject ?? "",
-    positionTitle: item?.positionTitle ?? "Guru",
     classIds: (item?.teacherClasses ?? []).map((value) => value.id),
   });
   const toggleClass = (id) => setForm((current) => ({
@@ -203,28 +204,23 @@ function UserEditor({ item, role, classes, subjects, schoolName, onClose, onSave
       fullName: form.fullName,
       email: form.email,
       role: form.role,
-      ...(isNew && form.password ? { password: form.password } : {}),
+      ...(isNew ? { password: form.password } : {}),
       ...(!isNew ? { isActive: form.isActive } : {}),
       ...(form.role === "student" ? { classId: form.classId } : {}),
       ...(form.role === "teacher" ? {
         subject: form.subject,
-        positionTitle: form.positionTitle,
         classIds: form.classIds,
       } : {}),
     });
   }
   return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
     <form className="modal-card" onSubmit={submit}>
-      <header><div><span>DATA AKUN</span><h2>{isNew ? "Buat Akun" : `Edit ${roleLabels[item.role] ?? "Pengguna"}`}</h2></div><button type="button" onClick={onClose} aria-label="Tutup">×</button></header>
+      <header><div><span>DATA AKUN</span><h2>{isNew ? "Buat Akun" : `Ubah ${roleLabels[item.role] ?? "Pengguna"}`}</h2></div><button type="button" onClick={onClose} aria-label="Tutup">×</button></header>
       <label>Nama Lengkap<input value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} required minLength="2" maxLength="120" /></label>
       <label>Email<input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required /></label>
       {isNew && <label>Sekolah<input value={schoolName ?? "Sekolah"} readOnly /></label>}
-      <label>Role<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}>
-        {isNew
-          ? <><option value="student">Student</option><option value="teacher">Teacher</option><option value="admin">Admin</option></>
-          : <><option value="student">Student</option><option value="teacher">Teacher</option><option value="admin">Admin</option></>}
-      </select></label>
-      {isNew && <label>Password (opsional)<input type="password" autoComplete="new-password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} minLength="8" maxLength="128" /><small>Kosongkan untuk membuat password sementara otomatis.</small></label>}
+      <label>Role<input value={roleLabels[form.role] ?? form.role} disabled /></label>
+      {isNew && <label>Kata Sandi<PasswordInput autoComplete="new-password" value={form.password} onChange={(event) => setForm({ ...form, password: event.target.value })} required maxLength="128" /></label>}
       {form.role === "student" && <>
         <label>Jenjang<select value={form.gradeLevel} onChange={(event) => setForm({ ...form, gradeLevel: event.target.value, classId: "" })} required>
           <option value="X">X</option><option value="XI">XI</option><option value="XII">XII</option>
@@ -238,7 +234,6 @@ function UserEditor({ item, role, classes, subjects, schoolName, onClose, onSave
           <option value="">Pilih mata pelajaran</option>{subjects.map((value) => <option key={value.id} value={value.name}>{value.name}</option>)}
           {!subjects.some((value) => value.name === form.subject) && form.subject && <option value={form.subject}>{form.subject}</option>}
         </select></label>
-        <label>Jabatan<input value={form.positionTitle} onChange={(event) => setForm({ ...form, positionTitle: event.target.value })} /></label>
         <label>Jenjang<select value={form.gradeLevel} onChange={(event) => setForm({ ...form, gradeLevel: event.target.value })}>
           <option value="X">X</option><option value="XI">XI</option><option value="XII">XII</option>
         </select></label>
@@ -252,27 +247,17 @@ function UserEditor({ item, role, classes, subjects, schoolName, onClose, onSave
   </div>;
 }
 
-function TemporaryPasswordDialog({ credential, onClose }) {
-  const [copyStatus, setCopyStatus] = useState("");
-  useEffect(() => setCopyStatus(""), [credential?.password]);
-  if (!credential) return null;
-  async function copyPassword() {
-    try {
-      await navigator.clipboard.writeText(credential.password);
-      setCopyStatus("Kata sandi sementara berhasil disalin.");
-    } catch {
-      setCopyStatus("Tidak dapat menyalin otomatis. Silakan salin kata sandi secara manual.");
-    }
-  }
+function ResetPasswordDialog({ item, onClose, onSubmit, saving, error }) {
+  const [password, setPassword] = useState("");
+  if (!item) return null;
   return <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section className="modal-card" role="dialog" aria-modal="true" aria-labelledby="temporary-password-title">
-      <header><div><span>KREDENSIAL SEMENTARA</span><h2 id="temporary-password-title">Akun siap digunakan</h2></div><button type="button" onClick={onClose} aria-label="Tutup">×</button></header>
-      <p className="hint">Password sementara dibuat otomatis dan hanya ditampilkan sekali. Salin lalu sampaikan melalui kanal yang aman.</p>
-      <label>Email<input readOnly value={credential.email} /></label>
-      <label>Kata Sandi Sementara<input readOnly value={credential.password} onFocus={(event) => event.target.select()} /></label>
-      {copyStatus && <p className="alert success" role="status">{copyStatus}</p>}
-      <footer><button className="secondary" type="button" onClick={copyPassword}>Salin untuk Dikirim</button><button className="primary" type="button" onClick={onClose}>Selesai</button></footer>
-    </section>
+    <form className="modal-card" onSubmit={(event) => { event.preventDefault(); onSubmit(password); }}>
+      <header><div><span>ATUR KATA SANDI</span><h2>Atur Ulang Kata Sandi</h2></div><button type="button" onClick={onClose} aria-label="Tutup">×</button></header>
+      <label>Email<input readOnly value={item.email} /></label>
+      <label>Kata Sandi<PasswordInput autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} required maxLength="128" /></label>
+      {error && <p className="alert error" role="alert">{error}</p>}
+      <footer><button className="secondary" type="button" onClick={onClose}>Batal</button><button className="primary" type="submit" disabled={saving}>{saving ? "Menyimpan..." : "Simpan Kata Sandi"}</button></footer>
+    </form>
   </div>;
 }
 
@@ -309,14 +294,14 @@ function UserProfileDialog({ item, onClose, onResetPassword }) {
       <div className="password-privacy-note">
         <strong>Kata sandi tidak dapat dilihat</strong>
         <p>Kata sandi disimpan dalam bentuk hash. Gunakan reset kata sandi untuk membuat sandi sementara baru.</p>
-        <button className="secondary" type="button" onClick={() => onResetPassword(item)}>Reset / Ganti Password</button>
+        <button className="secondary" type="button" onClick={() => onResetPassword(item)}>Atur Ulang / Ganti Kata Sandi</button>
       </div>
       <section className="password-reset-history">
-        <strong>Riwayat Reset Password</strong>
+        <strong>Riwayat Pengaturan Ulang Kata Sandi</strong>
         {logsError ? <p className="alert error" role="alert">{logsError}</p>
           : logsLoading ? <p>Memuat riwayat...</p>
             : resetLogs.length ? <ul>{resetLogs.map((log) => <li key={log.id}>
-              <span>{log.actorName} mereset password</span>
+              <span>{log.actorName} mengatur ulang kata sandi</span>
               <time dateTime={log.resetAt}>{new Date(log.resetAt).toLocaleString("id-ID")}</time>
             </li>)}</ul>
               : <p>Belum ada riwayat reset password.</p>}
@@ -333,7 +318,8 @@ function UserPage({ role, title, currentUser, schoolName }) {
   const [editing, setEditing] = useState(null);
   const [profile, setProfile] = useState(null);
   const [creating, setCreating] = useState(false);
-  const [credential, setCredential] = useState(null);
+  const [resetTarget, setResetTarget] = useState(null);
+  const [resettingPassword, setResettingPassword] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -365,9 +351,8 @@ function UserPage({ role, title, currentUser, schoolName }) {
     setNotice("");
     try {
       if (creating) {
-        const { user, temporaryPassword } = await adminApi.createUser(body);
-        if (temporaryPassword) setCredential({ email: user.email, password: temporaryPassword });
-        else setNotice("Akun berhasil dibuat dengan kata sandi yang Anda tetapkan.");
+        await adminApi.createUser(body);
+        setNotice("Akun berhasil dibuat dengan kata sandi yang Anda tetapkan.");
         setCreating(false);
       } else {
         await adminApi.updateUser(editing.id, body);
@@ -399,19 +384,28 @@ function UserPage({ role, title, currentUser, schoolName }) {
     }
   }
   async function resetPassword(item) {
-    if (!window.confirm(`Buat kata sandi sementara baru untuk ${item.fullName}?`)) return;
+    setError("");
+    setNotice("");
+    setResetTarget(item);
+  }
+  async function submitPasswordReset(password) {
+    if (!resetTarget) return;
+    setResettingPassword(true);
     setError("");
     setNotice("");
     try {
-      const { temporaryPassword } = await adminApi.resetPassword(item.id);
-      setCredential({ email: item.email, password: temporaryPassword });
+      await adminApi.resetPassword(resetTarget.id, { password });
+      setResetTarget(null);
+      setNotice("Kata sandi berhasil diubah.");
     } catch (requestError) {
       setError(requestError.message);
+    } finally {
+      setResettingPassword(false);
     }
   }
   return <>
     <Alert error={error} notice={notice} />
-    {role === "admin" && <p className="hint">Perubahan role dapat dilakukan dari halaman Data Siswa atau Data Guru. Admin tidak dapat menurunkan atau menghapus role akunnya sendiri.</p>}
+    {role === "admin" && <p className="hint">Jenis akun ditentukan oleh halaman Data Siswa, Data Guru, atau Data Admin. Admin tidak dapat menurunkan atau menghapus role akunnya sendiri.</p>}
     <section className="panel table-panel">
       <div className="panel-heading"><div><span>DAFTAR AKUN</span><h2>{title} <small>{loading ? "…" : users.length}</small></h2></div>
         <button className="primary" type="button" onClick={() => setCreating(true)}>
@@ -421,13 +415,13 @@ function UserPage({ role, title, currentUser, schoolName }) {
       {loading ? <p className="empty">Memuat data...</p> : <div className="table-scroll"><table>
         <thead><tr><th>Nama</th><th>Email</th>{role === "student" && <th>Kelas</th>}{role === "teacher" && <><th>Mata Pelajaran</th><th>Kelas Mengajar</th></>}<th>Status</th><th>Terdaftar</th><th>Aksi</th></tr></thead>
         <tbody>{users.map((item) => <tr key={item.id}>
-          <td><strong>{item.fullName}</strong>{item.id === currentUser.id && <small className="you-label">Anda</small>}</td>
-          <td>{item.email}</td>
-          {role === "student" && <td>{item.className ?? "Belum ditetapkan"}</td>}
-          {role === "teacher" && <><td>{item.subject ?? "—"}</td><td>{(item.teacherClasses ?? []).map((value) => value.name).join(", ") || "Belum ditugaskan"}</td></>}
-          <td><span className={`status ${item.isActive ? "active" : "inactive"}`}>{item.isActive ? "Aktif" : "Nonaktif"}</span></td>
-          <td>{new Date(item.createdAt).toLocaleDateString("id-ID")}</td>
-          <td><div className="row-actions"><button className="secondary" onClick={() => setProfile(item)}>Profil</button><button className="secondary" onClick={() => setEditing(item)}>Edit</button><button className="secondary" onClick={() => resetPassword(item)} disabled={item.id === currentUser.id}>Reset Password</button><button className="danger" onClick={() => deleteUser(item)} disabled={item.id === currentUser.id}>Hapus</button></div></td>
+          <td data-label="Nama"><strong>{item.fullName}</strong>{item.id === currentUser.id && <small className="you-label">Anda</small>}</td>
+          <td data-label="Email">{item.email}</td>
+          {role === "student" && <td data-label="Kelas">{item.className ?? "Belum ditetapkan"}</td>}
+          {role === "teacher" && <><td data-label="Mata Pelajaran">{item.subject ?? "—"}</td><td data-label="Kelas Mengajar">{(item.teacherClasses ?? []).map((value) => value.name).join(", ") || "Belum ditugaskan"}</td></>}
+          <td data-label="Status"><span className={`status ${item.isActive ? "active" : "inactive"}`}>{item.isActive ? "Aktif" : "Nonaktif"}</span></td>
+          <td data-label="Terdaftar">{new Date(item.createdAt).toLocaleDateString("id-ID")}</td>
+          <td data-label="Aksi"><div className="row-actions"><button className="secondary" onClick={() => setProfile(item)}>Profil</button><button className="secondary" onClick={() => setEditing(item)}>Ubah</button><button className="secondary" onClick={() => resetPassword(item)} disabled={item.id === currentUser.id}>Atur Ulang Kata Sandi</button><button className="danger" onClick={() => deleteUser(item)}>Hapus</button></div></td>
         </tr>)}
         {!users.length && <tr><td colSpan="8">Belum ada data {title.toLowerCase()}.</td></tr>}
         </tbody>
@@ -435,7 +429,13 @@ function UserPage({ role, title, currentUser, schoolName }) {
     </section>
     {(editing || creating) && <UserEditor item={editing} role={role} classes={classes} subjects={subjects} schoolName={schoolName} onClose={() => { setEditing(null); setCreating(false); }} onSave={saveUser} saving={saving} />}
     {profile && <UserProfileDialog item={profile} onClose={() => setProfile(null)} onResetPassword={(item) => { setProfile(null); resetPassword(item); }} />}
-    <TemporaryPasswordDialog credential={credential} onClose={() => setCredential(null)} />
+    <ResetPasswordDialog
+      item={resetTarget}
+      onClose={() => setResetTarget(null)}
+      onSubmit={submitPasswordReset}
+      saving={resettingPassword}
+      error={error}
+    />
   </>;
 }
 
@@ -478,12 +478,12 @@ function ClassesPage({ schoolId, schoolName }) {
     <Alert error={error} notice={notice} />
     <div className="toolbar"><p>Menghapus kelas juga menghapus penugasan siswa/guru dan target kelas pada ujian, tetapi tidak menghapus akun atau paket ujiannya.</p><button className="primary" onClick={() => setEditing({ id: null, name: "", gradeLevel: "X" })}>+ Tambah Kelas</button></div>
     <section className="panel table-panel"><div className="table-scroll"><table><thead><tr><th>Kelas</th><th>Jenjang</th><th>Jumlah Siswa</th><th>Jumlah Guru</th><th>Aksi</th></tr></thead><tbody>
-      {classes.map((item) => <tr key={item.id}><td><strong>{item.name}</strong></td><td>{item.gradeLevel}</td><td>{item.studentCount}</td><td>{item.teacherCount}</td><td><div className="row-actions"><button className="secondary" onClick={() => setEditing({ ...item })}>Edit</button><button className="danger" onClick={() => remove(item)}>Hapus</button></div></td></tr>)}
+      {classes.map((item) => <tr key={item.id}><td data-label="Kelas"><strong>{item.name}</strong></td><td data-label="Jenjang">{item.gradeLevel}</td><td data-label="Jumlah Siswa">{item.studentCount}</td><td data-label="Jumlah Guru">{item.teacherCount}</td><td data-label="Aksi"><div className="row-actions"><button className="secondary" onClick={() => setEditing({ ...item })}>Ubah</button><button className="danger" onClick={() => remove(item)}>Hapus</button></div></td></tr>)}
       {!loading && !classes.length && <tr><td colSpan="5">Belum ada kelas.</td></tr>}
       {loading && <tr><td colSpan="5">Memuat data...</td></tr>}
     </tbody></table></div></section>
     {editing && <div className="modal-backdrop"><form className="modal-card" onSubmit={save}>
-      <header><div><span>DATA SEKOLAH</span><h2>{editing.id ? "Edit Kelas" : "Tambah Kelas"}</h2></div><button type="button" onClick={() => setEditing(null)}>×</button></header>
+      <header><div><span>DATA SEKOLAH</span><h2>{editing.id ? "Ubah Kelas" : "Tambah Kelas"}</h2></div><button type="button" onClick={() => setEditing(null)}>×</button></header>
       <label>Jenjang<select value={editing.gradeLevel} onChange={(event) => setEditing({ ...editing, gradeLevel: event.target.value, name: className(event.target.value, 1) })}><option>X</option><option>XI</option><option>XII</option></select></label>
       <label>Kelas<select value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })}>{Array.from({ length: editing.gradeLevel === "X" ? 12 : 11 }, (_, i) => className(editing.gradeLevel, i + 1)).map((name) => <option key={name}>{name}</option>)}</select></label>
       <footer><button className="secondary" type="button" onClick={() => setEditing(null)}>Batal</button><button className="primary" disabled={saving}>{saving ? "Menyimpan..." : "Simpan"}</button></footer>
@@ -523,12 +523,12 @@ function SubjectsPage() {
     <Alert error={error} notice={notice} />
     <div className="toolbar"><p>Menghapus mata pelajaran juga menghapus soal dan paket ujian terkait beserta riwayatnya. Akun guru tetap ada tanpa mapel tersebut.</p><button className="primary" onClick={() => setEditing({ id: null, name: "" })}>+ Tambah Mata Pelajaran</button></div>
     <section className="panel table-panel"><div className="table-scroll"><table><thead><tr><th>Mata Pelajaran</th><th>Guru Pengampu</th><th>Aksi</th></tr></thead><tbody>
-      {subjects.map((item) => <tr key={item.id}><td><strong>{item.name}</strong></td><td>{item.teacherCount}</td><td><div className="row-actions"><button className="secondary" onClick={() => setEditing({ ...item })}>Edit</button><button className="danger" onClick={() => remove(item)}>Hapus</button></div></td></tr>)}
+      {subjects.map((item) => <tr key={item.id}><td data-label="Mata Pelajaran"><strong>{item.name}</strong></td><td data-label="Guru Pengampu">{item.teacherCount}</td><td data-label="Aksi"><div className="row-actions"><button className="secondary" onClick={() => setEditing({ ...item })}>Ubah</button><button className="danger" onClick={() => remove(item)}>Hapus</button></div></td></tr>)}
       {!loading && !subjects.length && <tr><td colSpan="3">Belum ada mata pelajaran.</td></tr>}
       {loading && <tr><td colSpan="3">Memuat data...</td></tr>}
     </tbody></table></div></section>
     {editing && <div className="modal-backdrop"><form className="modal-card" onSubmit={save}>
-      <header><div><span>DATA AKADEMIK</span><h2>{editing.id ? "Edit Mata Pelajaran" : "Tambah Mata Pelajaran"}</h2></div><button type="button" onClick={() => setEditing(null)}>×</button></header>
+      <header><div><span>DATA AKADEMIK</span><h2>{editing.id ? "Ubah Mata Pelajaran" : "Tambah Mata Pelajaran"}</h2></div><button type="button" onClick={() => setEditing(null)}>×</button></header>
       <label>Nama Mata Pelajaran<input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} required maxLength="100" /></label>
       <footer><button className="secondary" type="button" onClick={() => setEditing(null)}>Batal</button><button className="primary">Simpan</button></footer>
     </form></div>}
@@ -576,9 +576,9 @@ function ExamsPage() {
   return <>
     <Alert error={error} notice={notice} />
     <section className="panel table-panel"><div className="table-scroll"><table><thead><tr><th>Judul Ujian</th><th>Mata Pelajaran</th><th>Guru</th><th>Kelas Tujuan</th><th>Status</th><th>Mulai</th><th>Selesai</th><th>Token</th><th>Aksi</th></tr></thead><tbody>
-      {exams.map((exam) => <tr key={exam.id}><td><strong>{exam.title}</strong><small>{exam.questionCount} soal</small></td><td>{exam.subject}</td><td>{exam.teacherName ?? "—"}</td><td>{exam.classes.join(", ") || "—"}</td><td><span className="status active">{exam.status}</span></td><td>{new Date(exam.opensAt).toLocaleString("id-ID")}</td><td>{new Date(exam.closesAt).toLocaleString("id-ID")}</td>
-        <td>{exam.publishedAt ? <div className="row-actions"><code>{exam.code}</code><button className="secondary" type="button" onClick={() => copyToken(exam.code)}>{copiedToken === exam.code ? "Tersalin" : "Salin"}</button></div> : "Belum dipublish"}</td>
-        <td>{exam.publishedAt && <button className="secondary" type="button" onClick={() => setEditingToken({ id: exam.id, title: exam.title, code: exam.code })}>Ubah Token</button>}</td>
+      {exams.map((exam) => <tr key={exam.id}><td data-label="Judul Ujian"><strong>{exam.title}</strong><small>{exam.questionCount} soal</small></td><td data-label="Mata Pelajaran">{exam.subject}</td><td data-label="Guru">{exam.teacherName ?? "—"}</td><td data-label="Kelas Tujuan">{exam.classes.join(", ") || "—"}</td><td data-label="Status"><span className="status active">{exam.status}</span></td><td data-label="Mulai">{new Date(exam.opensAt).toLocaleString("id-ID")}</td><td data-label="Selesai">{new Date(exam.closesAt).toLocaleString("id-ID")}</td>
+        <td data-label="Token">{exam.publishedAt ? <div className="row-actions"><code>{exam.code}</code><button className="secondary" type="button" onClick={() => copyToken(exam.code)}>{copiedToken === exam.code ? "Tersalin" : "Salin"}</button></div> : "Belum dipublish"}</td>
+        <td data-label="Aksi">{exam.publishedAt && <button className="secondary" type="button" onClick={() => setEditingToken({ id: exam.id, title: exam.title, code: exam.code })}>Ubah Token</button>}</td>
       </tr>)}
       {!exams.length && <tr><td colSpan="9">Belum ada ujian.</td></tr>}
     </tbody></table></div></section>
@@ -664,13 +664,13 @@ function SchoolsPage({ schools, selectedSchoolId, onSchoolsChange, onSchoolChang
     <section className="panel table-panel"><div className="table-scroll"><table>
       <thead><tr><th>Sekolah</th><th>Kode</th><th>Alamat</th><th>Email</th><th>Guru</th><th>Siswa</th><th>Kelas</th><th>Status</th><th>Aksi</th></tr></thead>
       <tbody>{schools.map((school) => <tr key={school.id}>
-        <td><strong>{school.name}</strong></td><td><code>{school.id}</code></td>
-        <td>{school.address || "—"}</td><td>{school.email || "—"}</td>
-        <td>{school.teacherCount ?? 0}</td><td>{school.studentCount ?? 0}</td><td>{school.classCount ?? 0}</td>
-        <td><span className={`status ${school.isActive ? "active" : "inactive"}`}>{school.isActive ? "Aktif" : "Nonaktif"}</span></td>
-        <td><div className="row-actions">
+        <td data-label="Sekolah"><strong>{school.name}</strong></td><td data-label="Kode"><code>{school.id}</code></td>
+        <td data-label="Alamat">{school.address || "—"}</td><td data-label="Email">{school.email || "—"}</td>
+        <td data-label="Guru">{school.teacherCount ?? 0}</td><td data-label="Siswa">{school.studentCount ?? 0}</td><td data-label="Kelas">{school.classCount ?? 0}</td>
+        <td data-label="Status"><span className={`status ${school.isActive ? "active" : "inactive"}`}>{school.isActive ? "Aktif" : "Nonaktif"}</span></td>
+        <td data-label="Aksi"><div className="row-actions">
           <button className="secondary" type="button" onClick={() => onSchoolChange(school.id)}>Kelola</button>
-          <button className="secondary" type="button" onClick={() => setEditing({ ...school, isNew: false })}>Edit</button>
+          <button className="secondary" type="button" onClick={() => setEditing({ ...school, isNew: false })}>Ubah</button>
           <button className="danger" type="button" onClick={() => remove(school)}>Hapus</button>
         </div></td>
       </tr>)}
@@ -679,7 +679,7 @@ function SchoolsPage({ schools, selectedSchoolId, onSchoolsChange, onSchoolChang
     </tbody></table></div></section>
     {editing && <div className="modal-backdrop" onMouseDown={(event) => { if (event.target === event.currentTarget) setEditing(null); }}>
       <form className="modal-card" onSubmit={save}>
-        <header><div><span>MASTER SEKOLAH</span><h2>{editing.isNew ? "Tambah Sekolah" : "Edit Sekolah"}</h2></div><button type="button" onClick={() => setEditing(null)} aria-label="Tutup">×</button></header>
+        <header><div><span>DATA INDUK SEKOLAH</span><h2>{editing.isNew ? "Tambah Sekolah" : "Ubah Sekolah"}</h2></div><button type="button" onClick={() => setEditing(null)} aria-label="Tutup">×</button></header>
         <label>Kode Sekolah<input value={editing.id} onChange={(event) => setEditing({ ...editing, id: event.target.value.toLowerCase() })} required maxLength="80" pattern="[a-z0-9]+(-[a-z0-9]+)*" disabled={!editing.isNew} /></label>
         <label>Nama Sekolah<input value={editing.name} onChange={(event) => setEditing({ ...editing, name: event.target.value })} required minLength="2" maxLength="160" /></label>
         <label>Alamat<textarea value={editing.address ?? ""} onChange={(event) => setEditing({ ...editing, address: event.target.value })} maxLength="500" rows="3" /></label>
@@ -716,14 +716,44 @@ function SchoolSettings({ onSchoolUpdated }) {
 }
 
 function AdminProfile({ user, onProfileUpdated }) {
-  const [form, setForm] = useState({ fullName: user.fullName, email: user.email });
+  const [form, setForm] = useState({
+    fullName: user.fullName,
+    email: user.email,
+    newPassword: "",
+    confirmPassword: "",
+  });
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   async function submit(event) {
     event.preventDefault(); setError(""); setNotice("");
+    const changingPassword = form.newPassword || form.confirmPassword;
+    if (changingPassword && (!form.newPassword || !form.confirmPassword)) {
+      setError("Isi dan konfirmasi kata sandi baru.");
+      return;
+    }
+    if (form.newPassword !== form.confirmPassword) {
+      setError("Konfirmasi kata sandi baru tidak sama.");
+      return;
+    }
     try {
-      const { profile } = await adminApi.updateProfile(form);
-      setForm(profile); onProfileUpdated(profile); setNotice("Profil Admin berhasil diperbarui.");
+      const { profile } = await adminApi.updateProfile({
+        fullName: form.fullName,
+        email: form.email,
+        ...(changingPassword ? {
+          newPassword: form.newPassword,
+          confirmPassword: form.confirmPassword,
+        } : {}),
+      });
+      setForm({
+        fullName: profile.fullName,
+        email: profile.email,
+        newPassword: "",
+        confirmPassword: "",
+      });
+      onProfileUpdated(profile);
+      setNotice(changingPassword
+        ? "Profil dan kata sandi Admin berhasil diperbarui."
+        : "Profil Admin berhasil diperbarui.");
     } catch (requestError) { setError(requestError.message); }
   }
   return <section className="panel settings-panel">
@@ -732,7 +762,9 @@ function AdminProfile({ user, onProfileUpdated }) {
         <Alert error={error} notice={notice} />
         <label>Nama Lengkap<input value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} required /></label>
         <label>Email<input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required /></label>
-        <label>Role<input value="Administrator" disabled /></label>
+        <label>Role<input value="Admin" disabled /></label>
+        <label>Kata Sandi Baru<PasswordInput autoComplete="new-password" value={form.newPassword} onChange={(event) => setForm({ ...form, newPassword: event.target.value })} maxLength="128" /></label>
+        <label>Konfirmasi Kata Sandi Baru<PasswordInput autoComplete="new-password" value={form.confirmPassword} onChange={(event) => setForm({ ...form, confirmPassword: event.target.value })} maxLength="128" /></label>
         <button className="primary">Simpan Profil</button>
       </form>
     </div>
@@ -763,8 +795,10 @@ function ActivityPage() {
     tab_hidden: "Beralih dari halaman ujian",
     window_blur: "Jendela ujian kehilangan fokus",
     fullscreen_exit: "Keluar dari mode layar penuh",
-    print_screen: "Tombol PrintScreen terdeteksi",
+    print_screen: "Screenshot terdeteksi",
     app_closed: "Keluar atau menutup halaman ujian",
+    page_refresh: "Refresh halaman ujian",
+    back_navigation: "Kembali ke halaman sebelumnya",
   };
   return <>
     <section className="panel table-panel">
@@ -778,11 +812,11 @@ function ActivityPage() {
               : session.lastEventType === "app_closed" ? "Halaman ujian ditutup"
                 : "Sedang mengerjakan";
           return <tr key={session.attemptId}>
-            <td>{session.studentName}</td><td>{session.className ?? "—"}</td>
-            <td>{session.examTitle}</td><td>{new Date(session.startedAt).toLocaleString("id-ID")}</td>
-            <td>{status}{session.lastEventType ? ` · ${eventLabels[session.lastEventType] ?? session.lastEventType} (${new Date(session.lastEventAt).toLocaleString("id-ID")})` : ""}</td>
-            <td>{session.lastQuestionNumber ? `Soal ${session.lastQuestionNumber}` : "—"}</td>
-            <td>{session.violationCount}</td>
+            <td data-label="Siswa">{session.studentName}</td><td data-label="Kelas">{session.className ?? "—"}</td>
+            <td data-label="Ujian">{session.examTitle}</td><td data-label="Mulai">{new Date(session.startedAt).toLocaleString("id-ID")}</td>
+            <td data-label="Status Sesi">{status}{session.lastEventType ? ` · ${eventLabels[session.lastEventType] ?? session.lastEventType} (${new Date(session.lastEventAt).toLocaleString("id-ID")})` : ""}</td>
+            <td data-label="Soal di Aktivitas Terakhir">{session.lastQuestionNumber ? `Soal ${session.lastQuestionNumber}` : "—"}</td>
+            <td data-label="Pelanggaran">{session.violationCount}</td>
           </tr>;
         })}
         {!sessions.length && !error && <tr><td colSpan="7">Tidak ada sesi ujian yang sedang berlangsung.</td></tr>}
@@ -792,11 +826,11 @@ function ActivityPage() {
       <div className="panel-heading"><div><span>PEMANTAUAN AKTIVITAS</span><h2>Notifikasi Pelanggaran</h2></div></div>
       <div className="table-scroll"><table><thead><tr><th>Siswa</th><th>Kelas</th><th>Ujian</th><th>Aktivitas</th><th>Soal saat Aktivitas</th><th>Pelanggaran</th><th>Waktu</th></tr></thead><tbody>
         {events.map((event) => <tr key={event.id}>
-          <td>{event.studentName}</td><td>{event.className ?? "—"}</td><td>{event.examTitle}</td>
-          <td>{eventLabels[event.eventType] ?? event.eventType}{event.autoSubmitted ? " · Ujian dikumpulkan otomatis" : ""}</td>
-          <td>{event.questionNumber ? `Soal ${event.questionNumber}` : event.attemptId ? "—" : "Sebelum ujian"}</td>
-          <td>{event.attemptId ? `${event.violationNumber} dari 3` : `Praujian · ${event.violationNumber}`}</td>
-          <td>{new Date(event.occurredAt).toLocaleString("id-ID")}</td>
+          <td data-label="Siswa">{event.studentName}</td><td data-label="Kelas">{event.className ?? "—"}</td><td data-label="Ujian">{event.examTitle}</td>
+          <td data-label="Aktivitas">{eventLabels[event.eventType] ?? event.eventType}{event.autoSubmitted ? " · Ujian dikumpulkan otomatis" : ""}</td>
+          <td data-label="Soal saat Aktivitas">{event.questionNumber ? `Soal ${event.questionNumber}` : event.attemptId ? "—" : "Sebelum ujian"}</td>
+          <td data-label="Pelanggaran">{event.attemptId ? `${event.violationNumber} dari 3` : `Praujian · ${event.violationNumber}`}</td>
+          <td data-label="Waktu">{new Date(event.occurredAt).toLocaleString("id-ID")}</td>
         </tr>)}
         {!events.length && !error && <tr><td colSpan="7">Belum ada aktivitas yang dilaporkan.</td></tr>}
       </tbody></table></div>

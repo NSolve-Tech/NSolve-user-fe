@@ -1029,6 +1029,7 @@ a {
   body {
     background: #f7f9fb;
     font-size: 14px;
+    overflow-x: hidden;
   }
 
   .sidebar,
@@ -1129,7 +1130,10 @@ a {
 
   .dashboard {
     min-height: calc(100vh - 56px);
+    width: 100%;
+    max-width: 100%;
     padding: 18px 24px 95px;
+    overflow-x: hidden;
   }
 
   .panel,
@@ -1140,11 +1144,14 @@ a {
   }
 
   .welcome {
+    position: relative;
     display: flex;
     align-items: flex-start;
     flex-direction: column;
     justify-content: center;
-    height: 87px;
+    min-height: 87px;
+    width: 100%;
+    height: auto;
     padding: 13px 14px;
   }
 
@@ -1154,14 +1161,24 @@ a {
     letter-spacing: -0.025em;
   }
 
+  .student-dashboard .welcome h1 {
+    margin: 0 0 3px;
+    font-size: 17px;
+  }
+
   .welcome h1 span {
     font-size: 15px;
   }
 
   .welcome p {
-    max-width: 235px;
+    max-width: 220px;
     font-size: 12px;
     line-height: 1.4;
+  }
+
+  .student-dashboard .welcome p {
+    max-width: 220px;
+    font-size: 12px;
   }
 
   .desktop-welcome,
@@ -1180,8 +1197,8 @@ a {
 
   .welcome p b {
     position: absolute;
-    right: 38px;
-    top: 105px;
+    top: 14px;
+    right: 14px;
     margin: 0;
     padding: 6px 11px;
     border: 1px solid #bde8e3;
@@ -1663,7 +1680,7 @@ a {
   }
 
   .welcome p b {
-    right: 22px;
+    right: 14px;
   }
 
   .exam-card:not(.exam-card-compact) .exam-details {

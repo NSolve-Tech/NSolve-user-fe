@@ -35,15 +35,18 @@ function useExamActivityMonitor(
   onViolation,
   questionNumber,
   beforeReport,
+  onShield,
 ) {
   const callbackRef = useRef(onViolation);
   const questionNumberRef = useRef(questionNumber);
   const beforeReportRef = useRef(beforeReport);
+  const shieldRef = useRef(onShield);
   useEffect(() => { callbackRef.current = onViolation; }, [onViolation]);
   useEffect(() => {
     questionNumberRef.current = questionNumber;
     beforeReportRef.current = beforeReport;
-  }, [beforeReport, questionNumber]);
+    shieldRef.current = onShield;
+  }, [beforeReport, onShield, questionNumber]);
   useEffect(() => {
     if (!enabled || !examId) return undefined;
     let lastReportedAt = 0;
@@ -52,8 +55,10 @@ function useExamActivityMonitor(
     const pendingReports = new Set();
     const report = async (eventType, { keepalive = false, notify = true } = {}) => {
       const currentTime = Date.now();
-      if (eventType !== "app_closed" && currentTime - lastReportedAt < 2000) return;
+      if (!["app_closed", "page_refresh", "back_navigation"].includes(eventType) &&
+          currentTime - lastReportedAt < 2000) return;
       lastReportedAt = currentTime;
+      if (notify && attemptId) shieldRef.current?.();
       const currentQuestionNumber = questionNumberRef.current;
       try {
         if (!keepalive) await beforeReportRef.current?.();
@@ -79,7 +84,24 @@ function useExamActivityMonitor(
       if (!leavingPage && document.visibilityState === "hidden") scheduleReport("tab_hidden");
     };
     const onKeyDown = (event) => {
-      if (!leavingPage && event.key === "PrintScreen") report("print_screen");
+      if (leavingPage) return;
+      const key = event.key.toLowerCase();
+      const screenshotShortcut = event.key === "PrintScreen" ||
+        ((event.metaKey || event.ctrlKey) && event.shiftKey && ["3", "4", "5"].includes(key));
+      if (screenshotShortcut) {
+        report("print_screen");
+        return;
+      }
+      if ((event.altKey && event.key === "ArrowLeft") ||
+          (event.metaKey && key === "[")) {
+        event.preventDefault();
+        report("back_navigation");
+        return;
+      }
+      if (event.key === "F5" || ((event.metaKey || event.ctrlKey) && key === "r")) {
+        event.preventDefault();
+        report("page_refresh");
+      }
     };
     const onFullscreenChange = () => {
       if (!leavingPage && !document.fullscreenElement) scheduleReport("fullscreen_exit");
@@ -92,16 +114,31 @@ function useExamActivityMonitor(
       pendingReports.add(timer);
     };
     const onBlur = () => { if (!leavingPage) scheduleReport("window_blur"); };
-    const onPageHide = () => {
-      leavingPage = true;
+    const clearPendingReports = () => {
       for (const timer of pendingReports) window.clearTimeout(timer);
       pendingReports.clear();
+    };
+    const onBackNavigation = () => {
+      if (leavingPage) return;
+      leavingPage = true;
+      clearPendingReports();
+      report("back_navigation", { keepalive: true, notify: false });
+    };
+    const onPageHide = () => {
+      if (leavingPage) return;
+      leavingPage = true;
+      clearPendingReports();
       if (attemptId) report("app_closed", { keepalive: true, notify: false });
     };
+    const navigationType = performance.getEntriesByType("navigation")[0]?.type;
+    if (attemptId && ["reload", "back_forward"].includes(navigationType)) {
+      report(navigationType === "reload" ? "page_refresh" : "back_navigation");
+    }
     document.addEventListener("visibilitychange", onVisibilityChange);
     document.addEventListener("fullscreenchange", onFullscreenChange);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("blur", onBlur);
+    window.addEventListener("popstate", onBackNavigation);
     window.addEventListener("pagehide", onPageHide);
     return () => {
       disposed = true;
@@ -111,6 +148,7 @@ function useExamActivityMonitor(
       document.removeEventListener("fullscreenchange", onFullscreenChange);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("blur", onBlur);
+      window.removeEventListener("popstate", onBackNavigation);
       window.removeEventListener("pagehide", onPageHide);
     };
   }, [examId, attemptId, enabled]);
@@ -131,19 +169,26 @@ export function ActivityWarning({ activity, onClose, frozen = false }) {
     tab_hidden: "Perpindahan tab",
     window_blur: "Jendela kehilangan fokus",
     fullscreen_exit: "Keluar dari layar penuh",
-    print_screen: "Tombol screenshot",
+    print_screen: "Screenshot",
+    page_refresh: "Refresh halaman",
+    back_navigation: "Kembali ke halaman sebelumnya",
   };
   return <div className="activity-warning-backdrop">
     <section className="activity-warning" role="alertdialog" aria-modal="true" aria-labelledby="activity-warning-title">
       <span className="activity-warning-icon"><UiIcon name="warning" /></span>
       <h2 id="activity-warning-title">Aktivitas ujian terdeteksi</h2>
-      <p>{activity.autoSubmitted
-        ? "Pelanggaran ketiga tercatat. Ujian dihentikan otomatis dan jawaban yang sudah tersimpan telah dinilai."
-        : `${eventLabels[activity.eventType] ?? "Aktivitas browser"} tercatat. Deteksi browser bersifat terbatas dan tidak dapat menjamin semua screenshot tertangkap.`}</p>
+      <p>{activity.error
+        ? `Aktivitas ${eventLabels[activity.eventType] ?? "browser"} terdeteksi, tetapi tidak dapat dicatat: ${activity.error}`
+        : activity.autoSubmitted
+          ? "Anda telah melakukan pelanggaran sebanyak 3 kali. Ujian telah dikumpulkan otomatis."
+          : activity.eventType === "print_screen"
+            ? "Screenshot terdeteksi. Aktivitas ini telah dicatat oleh sistem."
+            : activity.violationCount >= 2
+              ? `Pelanggaran ke-${activity.violationCount} (${eventLabels[activity.eventType] ?? "aktivitas browser"}) telah dicatat. Pelanggaran berikutnya akan mengumpulkan ujian secara otomatis.`
+              : `${eventLabels[activity.eventType] ?? "Aktivitas browser"} tercatat. Deteksi browser bersifat terbatas dan tidak dapat menjamin semua screenshot tertangkap.`}</p>
       {activity.violationCount && <strong className="activity-warning-count">Pelanggaran {activity.violationCount} dari 3</strong>}
-      {activity.disqualified && <p className="activity-warning-error">Sesi ditandai untuk verifikasi administrator. Akses ke soal telah dihentikan.</p>}
+      {activity.disqualified && !activity.autoSubmitted && <p className="activity-warning-error">Sesi ditandai untuk verifikasi administrator. Akses ke soal telah dihentikan.</p>}
       {frozen && !activity.disqualified && <p className="activity-warning-error">Sesi dibekukan sementara. Jawaban akan dapat dilanjutkan setelah masa pembekuan berakhir.</p>}
-      {activity.error && <p className="activity-warning-error" role="alert">Aktivitas belum berhasil dikirim ke server: {activity.error}</p>}
       {!activity.disqualified && <button type="button" onClick={onClose} disabled={frozen}>
         {frozen ? "Sesi dibekukan sementara" : "Saya Mengerti"}
       </button>}
@@ -272,7 +317,7 @@ function MobileNav({ active = "Beranda" }) {
 function SiteFooter() {
   return (
     <footer className="student-footer">
-      <span>© 2026 All rights reserved</span>
+      <span>© 2026 Hak cipta dilindungi undang-undang</span>
       <span className="student-footer-divider" aria-hidden="true">|</span>
       <strong>NSolve-Tech</strong>
     </footer>
@@ -559,7 +604,7 @@ function GradePage({ user, onLogout }) {
                         {scoreVisible && !isPassed && <button type="button" className="grade-remedial-button" onClick={() => requestRemedial(result.id)} disabled={requestingId === result.id || remedialPending}>
                           {requestingId === result.id ? "Mengirim..." : remedialPending ? "Remedial Diajukan" : "Ajukan Remedial"}
                         </button>}
-                        <a href={`/ujian/selesai?id=${encodeURIComponent(result.id)}`}>{scoreVisible ? "Lihat Review" : "Lihat Status"}</a>
+                        <a href={`/ujian/selesai?id=${encodeURIComponent(result.id)}`}>{scoreVisible ? "Tinjau Jawaban" : "Lihat Status"}</a>
                       </div>
                     </footer>
                   </article>
@@ -617,8 +662,6 @@ function ProfilePage({ user, onLogout, onProfileUpdated }) {
         setForm({
           fullName: value.fullName,
           email: value.email,
-          currentPassword: "",
-          newPassword: "",
         });
       })
       .catch((requestError) => { if (active) setError(requestError.message); })
@@ -637,8 +680,6 @@ function ProfilePage({ user, onLogout, onProfileUpdated }) {
       setForm({
         fullName: value.fullName,
         email: value.email,
-        currentPassword: "",
-        newPassword: "",
       });
       setEditing(false);
       setNotice("Profil berhasil diperbarui.");
@@ -679,8 +720,6 @@ function ProfilePage({ user, onLogout, onProfileUpdated }) {
             <label>Nama Lengkap<input value={form.fullName} onChange={(event) => setForm({ ...form, fullName: event.target.value })} required minLength="2" maxLength="120" /></label>
             <label>Email<input type="email" value={form.email} onChange={(event) => setForm({ ...form, email: event.target.value })} required maxLength="254" /></label>
             <label>Kelas<input value={profile.className ?? "Belum ditetapkan"} disabled /></label>
-            <label>Kata Sandi Saat Ini<input type="password" autoComplete="current-password" value={form.currentPassword} onChange={(event) => setForm({ ...form, currentPassword: event.target.value })} placeholder="Isi untuk mengganti kata sandi" /></label>
-            <label>Kata Sandi Baru<input type="password" autoComplete="new-password" value={form.newPassword} onChange={(event) => setForm({ ...form, newPassword: event.target.value })} minLength="8" maxLength="128" placeholder="Minimal 8 karakter" /></label>
             <p className="student-profile-note">Perubahan kelas dilakukan oleh administrator sekolah.</p>
             <div className="teacher-profile-actions">
               <button type="button" className="teacher-secondary-button" onClick={() => setEditing(false)} disabled={saving}>Batal</button>
@@ -691,7 +730,7 @@ function ProfilePage({ user, onLogout, onProfileUpdated }) {
           <>
             <dl>{fields.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl>
             <button type="button" className="teacher-primary-button teacher-profile-edit" onClick={() => { setEditing(true); setError(""); setNotice(""); }}>
-              ✏️ Edit Profil
+              ✏️ Ubah Profil
             </button>
           </>
         )}
@@ -817,12 +856,30 @@ function ExamPage({ drawer = false, search = "", user, onLogout }) {
   const saveQueue = useRef(new Map());
   const submissionStarted = useRef(false);
   const autoSubmitNavigationStarted = useRef(false);
+  const activityShieldRef = useRef(null);
+
+  function showActivityShield() {
+    if (activityShieldRef.current) return;
+    const shield = document.createElement("div");
+    shield.className = "exam-activity-shield";
+    shield.setAttribute("aria-hidden", "true");
+    document.body.append(shield);
+    activityShieldRef.current = shield;
+  }
+
+  function hideActivityShield() {
+    activityShieldRef.current?.remove();
+    activityShieldRef.current = null;
+  }
+
+  useEffect(() => () => hideActivityShield(), []);
 
   function flushPendingAnswers() {
     return Promise.allSettled([...saveQueue.current.values()]);
   }
 
   function handleExamActivity(activity) {
+    hideActivityShield();
     if (activity.autoSubmitted && activity.resultId &&
         !autoSubmitNavigationStarted.current) {
       autoSubmitNavigationStarted.current = true;
@@ -844,6 +901,7 @@ function ExamPage({ drawer = false, search = "", user, onLogout }) {
     handleExamActivity,
     currentNumber,
     flushPendingAnswers,
+    showActivityShield,
   );
 
   useEffect(() => {
@@ -1057,7 +1115,7 @@ function ExamPage({ drawer = false, search = "", user, onLogout }) {
       <div className="mobile-exam-controls">
         <button type="button" disabled={currentNumber <= 1} onClick={() => selectQuestion(currentNumber - 1)}>‹　Sebelumnya</button>
         <button type="button" disabled={currentNumber >= questions.length} onClick={() => selectQuestion(currentNumber + 1)}>Selanjutnya　›</button>
-        <button type="button" onClick={() => setConfirmSubmit(true)}>☑ Submit Jawaban</button>
+        <button type="button" onClick={() => setConfirmSubmit(true)}>☑ Kumpulkan Jawaban</button>
       </div>
       {drawer && <QuestionDrawer
         questions={questions}
@@ -1190,7 +1248,7 @@ function ResultPage({ user, onLogout, search }) {
           </section>
         )}
         {result && result.showScore !== false && <>
-          <div className="result-id">●　Review hasil ujian　·　<strong>{result.code}</strong></div>
+          <div className="result-id">●　Tinjau hasil ujian　·　<strong>{result.code}</strong></div>
           <section className="result-hero">
             <div>
               <span>{result.code}</span>
@@ -1242,7 +1300,7 @@ function ResultPage({ user, onLogout, search }) {
             {!result.passed && <button type="button" onClick={requestRemedial} disabled={remedialPending || ["pending", "approved", "scheduled"].includes(result.remedialStatus)}>
               {remedialPending ? "Mengirim..." : ["pending", "approved", "scheduled"].includes(result.remedialStatus) ? "Remedial Diajukan" : "Ajukan Remedial"}
             </button>}
-            <a href="/">Selesai Review　<UiIcon name="arrow" /></a>
+            <a href="/">Selesai Meninjau　<UiIcon name="arrow" /></a>
           </div>
         </>}
       </main>

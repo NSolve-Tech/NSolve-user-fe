@@ -776,7 +776,7 @@ function App() {
             onToggle={() => setOpenExamHistory((open) => !open)}
           />
           <footer className="page-footer">
-            © 2026 All rights reserved&nbsp; | &nbsp;<strong>NSolve-Tech</strong>
+            © 2026 Hak cipta dilindungi undang-undang&nbsp; | &nbsp;<strong>NSolve-Tech</strong>
           </footer>
         </div>
       {tokenDialog}

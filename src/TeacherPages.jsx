@@ -16,7 +16,7 @@ const questionTypes = [
   ["true_false", "Benar / Salah"],
   ["matching", "Menjodohkan"],
   ["short_answer", "Isian Singkat"],
-  ["essay", "Essay"],
+  ["essay", "Esai"],
 ];
 const typeNames = Object.fromEntries(questionTypes);
 
@@ -142,8 +142,8 @@ export function TeacherShell({
       ["Data Kelas", "/guru/data-kelas", "school"],
       ["Profil", "/guru/profil", "create"],
     ]);
-  const workspace = workspaceLabel ?? (isAdmin ? "WORKSPACE ADMIN" : user?.role === "student" ? "PORTAL SISWA" : "WORKSPACE GURU");
-  const accountDescription = roleDescription ?? (isAdmin ? "Administrator" : user?.role === "student" ? "Siswa" : [profile?.positionTitle ?? "Guru", displaySubject].filter(Boolean).join(" "));
+  const workspace = workspaceLabel ?? (isAdmin ? "RUANG KERJA ADMIN" : user?.role === "student" ? "PORTAL SISWA" : "RUANG KERJA GURU");
+  const accountDescription = roleDescription ?? (isAdmin ? "Admin" : user?.role === "student" ? "Siswa" : [profile?.positionTitle ?? "Guru", displaySubject].filter(Boolean).join(" "));
   const pendingRemedialCount = remedialRequests.filter((request) => request.status === "pending").length;
   return (
     <div className="teacher-app">
@@ -353,8 +353,10 @@ function AdminDashboard({
     tab_hidden: "Beralih dari halaman ujian",
     window_blur: "Jendela ujian kehilangan fokus",
     fullscreen_exit: "Keluar dari mode layar penuh",
-    print_screen: "Tombol PrintScreen terdeteksi",
+    print_screen: "Screenshot terdeteksi",
     app_closed: "Keluar atau menutup halaman ujian",
+    page_refresh: "Refresh halaman ujian",
+    back_navigation: "Kembali ke halaman sebelumnya",
   };
   return <TeacherShell
     active={monitorOnly ? "Pengawasan Ujian" : "Dashboard"}
@@ -549,8 +551,8 @@ function TeacherDashboard({ user }) {
       {requestError && <div className="teacher-alert error" role="alert">{requestError}</div>}
       <section className="teacher-stat-grid" aria-label="Statistik guru">
         {[
-          ["Total Ujian", stats?.totalExams, "exam"],
-          ["Total Peserta", stats?.totalStudents, "students"],
+          ["Jumlah Ujian", stats?.totalExams, "exam"],
+          ["Jumlah Peserta", stats?.totalStudents, "students"],
           ["Ujian Aktif", stats?.activeExams, "calendar"],
           ["Ujian Selesai", stats?.completedExams, "chart"],
         ].map(([label, value, icon]) => (
@@ -624,7 +626,7 @@ function TeacherDashboard({ user }) {
             </section>
           )}
           <footer className="teacher-page-footer">
-            <span>© 2026 All rights reserved</span>
+            <span>© 2026 Hak cipta dilindungi undang-undang</span>
             <b>|</b>
             <strong>NSolve-Tech</strong>
           </footer>
@@ -636,7 +638,7 @@ function TeacherDashboard({ user }) {
 
 function statusName(status) {
   return ({
-    draft: "Draft",
+    draft: "Draf",
     scheduled: "Dijadwalkan",
     active: "Aktif",
     completed: "Selesai",
@@ -688,7 +690,7 @@ function ExamList({ user, schedule = false }) {
   const questionTypeLabel = (exam) => {
     const types = [];
     if (exam.mcQuestionCount > 0) types.push("Pilihan Ganda");
-    if (exam.essayQuestionCount > 0) types.push("Essay");
+    if (exam.essayQuestionCount > 0) types.push("Esai");
     return types.join(" & ") || "—";
   };
   return (
@@ -697,11 +699,11 @@ function ExamList({ user, schedule = false }) {
         eyebrow={schedule ? "JADWAL" : "KELOLA SOAL"}
         title={title}
         description={schedule
-          ? "Pantau ujian draft, terjadwal, aktif, dan selesai."
+          ? "Pantau ujian draf, terjadwal, aktif, dan selesai."
           : "Buat ujian dengan mengetik soal atau mengimpor soal yang sudah tersedia."}
         action={schedule ? null : (
           <div className="teacher-title-actions">
-            <a className="teacher-secondary-button" href="/guru/import-soal"><TeacherIcon name="import" /> Import Soal</a>
+            <a className="teacher-secondary-button" href="/guru/import-soal"><TeacherIcon name="import" /> Impor Soal</a>
             <a className="teacher-primary-button" href="/guru/soal/baru"><TeacherIcon name="create" /> Buat Soal</a>
           </div>
         )}
@@ -709,7 +711,7 @@ function ExamList({ user, schedule = false }) {
       {error && <div className="teacher-alert error" role="alert">{error}</div>}
       {schedule && (
         <div className="teacher-status-tabs" aria-label="Filter jadwal ujian">
-          {[["all", "Semua"], ["draft", "Draft"], ["scheduled", "Terjadwal"], ["active", "Aktif"], ["completed", "Selesai"]].map(([value, label]) => (
+          {[["all", "Semua"], ["draft", "Draf"], ["scheduled", "Terjadwal"], ["active", "Aktif"], ["completed", "Selesai"]].map(([value, label]) => (
             <button type="button" className={statusFilter === value ? "active" : ""} key={value} onClick={() => setStatusFilter(value)}>
               {label}{value !== "all" && <span>{exams.filter((exam) => exam.status === value).length}</span>}
             </button>
@@ -730,7 +732,7 @@ function ExamList({ user, schedule = false }) {
               <label>Status
                 <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
                   <option value="all">Semua status</option>
-                  <option value="draft">Draft</option>
+                  <option value="draft">Draf</option>
                   <option value="scheduled">Terjadwal</option>
                   <option value="active">Aktif</option>
                   <option value="completed">Selesai</option>
@@ -751,7 +753,7 @@ function ExamList({ user, schedule = false }) {
                   ) : (
                     <>
                       <th>Judul Soal</th><th>Mata Pelajaran</th><th>Tipe Soal</th>
-                      <th>Kelas Tujuan</th><th>Status</th><th>Tanggal Publish</th><th>Aksi</th>
+                      <th>Kelas Tujuan</th><th>Status</th><th>Tanggal Publikasi</th><th>Aksi</th>
                     </>
                   )}
                 </tr>
@@ -761,30 +763,30 @@ function ExamList({ user, schedule = false }) {
                   <tr key={exam.id}>
                     {schedule ? (
                       <>
-                        <td><a className="teacher-table-title" href={`/guru/ujian/${exam.id}?from=schedule`}>{exam.title}</a></td>
-                        <td>{exam.questionCount} soal</td>
-                        <td>{exam.subject}</td>
-                        <td>{questionTypeLabel(exam)}</td>
-                        <td>{exam.classes?.map((item) => item.name).join(", ") || "—"}</td>
-                        <td><b className={`teacher-status ${exam.status}`}>{statusName(exam.status)}</b></td>
-                        <td>{formatDate(exam.createdAt)}</td>
-                        <td>{formatDate(exam.opensAt, true)}</td>
-                        <td>{formatDate(exam.closesAt, true)}</td>
-                        <td>{exam.publishedAt && exam.code && !exam.code.startsWith("DRAFT-")
+                        <td data-label="Judul"><a className="teacher-table-title" href={`/guru/ujian/${exam.id}?from=schedule`}>{exam.title}</a></td>
+                        <td data-label="Soal">{exam.questionCount} soal</td>
+                        <td data-label="Mata Pelajaran">{exam.subject}</td>
+                        <td data-label="Tipe Soal">{questionTypeLabel(exam)}</td>
+                        <td data-label="Kelas Tujuan">{exam.classes?.map((item) => item.name).join(", ") || "—"}</td>
+                        <td data-label="Status"><b className={`teacher-status ${exam.status}`}>{statusName(exam.status)}</b></td>
+                        <td data-label="Tanggal Dibuat">{formatDate(exam.createdAt)}</td>
+                        <td data-label="Tanggal Mulai">{formatDate(exam.opensAt, true)}</td>
+                        <td data-label="Tanggal Selesai">{formatDate(exam.closesAt, true)}</td>
+                        <td data-label="Token">{exam.publishedAt && exam.code && !exam.code.startsWith("DRAFT-")
                           ? <div className="teacher-table-token"><code>{exam.code}</code><button type="button" className="teacher-secondary-button" onClick={() => copyToken(exam.code)}>{copiedToken === exam.code ? "Tersalin" : "Salin Token"}</button></div>
                           : <span>Belum dipublish</span>}</td>
                       </>
                     ) : (
                       <>
-                        <td>{exam.title}</td>
-                        <td>{exam.subject}</td>
-                        <td>{questionTypeLabel(exam)}</td>
-                        <td>{exam.classes?.map((item) => item.name).join(", ") || "—"}</td>
-                        <td><b className={`teacher-status ${exam.status}`}>{statusName(exam.status)}</b></td>
-                        <td>{exam.publishedAt ? formatDate(exam.publishedAt) : "—"}</td>
-                        <td className="teacher-table-actions">
+                        <td data-label="Judul Soal">{exam.title}</td>
+                        <td data-label="Mata Pelajaran">{exam.subject}</td>
+                        <td data-label="Tipe Soal">{questionTypeLabel(exam)}</td>
+                        <td data-label="Kelas Tujuan">{exam.classes?.map((item) => item.name).join(", ") || "—"}</td>
+                        <td data-label="Status"><b className={`teacher-status ${exam.status}`}>{statusName(exam.status)}</b></td>
+                        <td data-label="Tanggal Publikasi">{exam.publishedAt ? formatDate(exam.publishedAt) : "—"}</td>
+                        <td data-label="Aksi" className="teacher-table-actions">
                           <a className="teacher-secondary-button" href={`/guru/ujian/${exam.id}?from=soal`}>Detail</a>
-                          <a className="teacher-secondary-button" href={`/guru/ujian/${exam.id}/edit?from=soal`}>Edit</a>
+                          <a className="teacher-secondary-button" href={`/guru/ujian/${exam.id}/edit?from=soal`}>Ubah</a>
                           <button type="button" className="teacher-danger-button" onClick={() => removeExam(exam.id)}>Hapus</button>
                         </td>
                       </>
@@ -809,8 +811,8 @@ const wizardSteps = [
   "Jadwal",
   "Token",
   "Input Soal",
-  "Preview",
-  "Publish",
+  "Pratinjau",
+  "Terbitkan",
 ];
 
 function createQuestionDraft(type) {
@@ -1299,8 +1301,8 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
     <TeacherShell active="Soal" user={user}>
       <a className="teacher-back-link" href={returnToSchedule ? "/guru/jadwal-ujian" : "/guru/soal"}><TeacherIcon name="back" /> Kembali ke {returnToSchedule ? "Jadwal Ujian" : "Soal"}</a>
       <PageTitle
-        eyebrow={isEditing ? "EDIT UJIAN" : fromImport ? "IMPORT SOAL KE UJIAN" : "BUAT SOAL"}
-        title={isEditing ? "Edit Ujian" : fromImport ? "Buat Ujian dari Import" : "Buat Soal Baru"}
+        eyebrow={isEditing ? "UBAH UJIAN" : fromImport ? "IMPOR SOAL KE UJIAN" : "BUAT SOAL"}
+        title={isEditing ? "Ubah Ujian" : fromImport ? "Buat Ujian dari Impor" : "Buat Soal Baru"}
         description={fromImport
           ? "Soal hasil import sudah terisi. Lengkapi judul, kelas, jadwal, dan pengaturan ujian."
           : "Lengkapi informasi ujian, kelas peserta, jadwal, dan daftar soal."}
@@ -1321,7 +1323,7 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
               {[
                 ["multiple_choice", "Pilihan Ganda", "Siswa memilih satu jawaban dari lima opsi."],
                 ...(!importedExamDraft.questions
-                  ? [["essay", "Essay", "Siswa menulis jawaban dengan kata-kata sendiri."]]
+                  ? [["essay", "Esai", "Siswa menulis jawaban dengan kata-kata sendiri."]]
                   : []),
               ].map(([value, title, description]) => (
                 <label className={form.type === value ? "selected" : ""} key={value}>
@@ -1479,11 +1481,11 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
                     <label className="teacher-wizard-label">Tipe Pertanyaan
                       <select value={question.type} onChange={(event) => setQuestionType(index, event.target.value)}>
                         <option value="multiple_choice">Pilihan Ganda</option>
-                        <option value="essay">Essay</option>
+                        <option value="essay">Esai</option>
                       </select>
                     </label>
                   )}
-                  <label className="teacher-wizard-label">{(question.type ?? form.type) === "essay" ? "Pertanyaan Essay" : "Pertanyaan"}
+                  <label className="teacher-wizard-label">{(question.type ?? form.type) === "essay" ? "Pertanyaan Esai" : "Pertanyaan"}
                     <textarea minLength="10" maxLength="4000" rows="4" value={question.prompt} onChange={(event) => updateQuestion(index, { prompt: event.target.value })} placeholder="Tulis pertanyaan dengan jelas..." required />
                   </label>
                   {(question.type ?? form.type) === "essay" ? (
@@ -1508,7 +1510,7 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
         )}
         {step === 7 && (
           <>
-            <div className="teacher-panel-heading"><div><span>LANGKAH 8</span><h2>Preview untuk Siswa</h2></div><span>{form.subject}</span></div>
+            <div className="teacher-panel-heading"><div><span>LANGKAH 8</span><h2>Pratinjau untuk Siswa</h2></div><span>{form.subject}</span></div>
             <article className="teacher-student-preview">
               <div><small>{form.subject} · {selectedClasses.map((item) => item.name).join(", ")}</small><h3>{form.title || "Judul Soal"}</h3><span>{form.questions.length} soal · KKM {form.kkm} · {form.randomizeQuestions ? "Urutan diacak per siswa" : "Sesuai urutan guru"}</span></div>
               {form.questions.map((question, index) => (
@@ -1524,7 +1526,7 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
         )}
         {step === 8 && (
           <>
-            <div className="teacher-panel-heading"><div><span>LANGKAH 9</span><h2>{isEditing ? "Simpan Perubahan" : "Publish Soal"}</h2></div></div>
+            <div className="teacher-panel-heading"><div><span>LANGKAH 9</span><h2>{isEditing ? "Simpan Perubahan" : "Terbitkan Soal"}</h2></div></div>
             {token ? (
               <div className="teacher-token-result" role="status">
                 <span>Ujian berhasil dipublish</span>
@@ -1537,7 +1539,7 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
               <div className="teacher-publish-confirm">
                 <p><strong>{form.title || "Judul Soal"}</strong> {isEditing ? "akan disimpan kembali" : `akan dipublish untuk ${selectedClassIds.length} kelas dengan status ${form.startMode === "now" ? "aktif" : "terjadwal"}`}.</p>
                 <p>{isEditing ? "Perubahan akan langsung tersimpan pada data ujian." : tokenMode === "custom" ? `Token ${editToken} akan digunakan untuk masuk ke ujian.` : "Token masuk siswa akan dibuat otomatis setelah publish."}</p>
-                <button className="teacher-primary-button" type="button" onClick={publish} disabled={saving}>{saving ? "Menyimpan..." : isEditing ? "Simpan Perubahan" : "Publish Soal"}</button>
+                <button className="teacher-primary-button" type="button" onClick={publish} disabled={saving}>{saving ? "Menyimpan..." : isEditing ? "Simpan Perubahan" : "Terbitkan Soal"}</button>
               </div>
             )}
           </>
@@ -1556,6 +1558,8 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
 function ExamDetail({ user, examId, returnToSchedule = false }) {
   const [exam, setExam] = useState(null);
   const [error, setError] = useState("");
+  const [activityEvents, setActivityEvents] = useState([]);
+  const [activityError, setActivityError] = useState("");
   const [copiedToken, setCopiedToken] = useState(false);
   useEffect(() => {
     let active = true;
@@ -1567,8 +1571,39 @@ function ExamDetail({ user, examId, returnToSchedule = false }) {
       .catch((requestError) => { if (active) setError(requestError.message); });
     return () => { active = false; };
   }, [examId]);
+  useEffect(() => {
+    let active = true;
+    let timer;
+    async function loadActivity() {
+      try {
+        const { events } = await teacherApi.getExamActivity(examId);
+        if (active) {
+          setActivityEvents(events);
+          setActivityError("");
+        }
+      } catch (requestError) {
+        if (active) setActivityError(requestError.message);
+      } finally {
+        if (active) timer = window.setTimeout(loadActivity, 15_000);
+      }
+    }
+    loadActivity();
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [examId]);
   if (!exam) return <TeacherShell active={returnToSchedule ? "Jadwal Ujian" : "Soal"} user={user}>{error ? <div className="teacher-alert error" role="alert">{error}</div> : <p className="teacher-empty">Memuat data ujian...</p>}</TeacherShell>;
   const questionTypes = [...new Set(exam.questions.map((question) => typeNames[question.type]))];
+  const activityLabels = {
+    tab_hidden: "Pindah tab",
+    window_blur: "Browser kehilangan fokus / membuka aplikasi lain",
+    fullscreen_exit: "Keluar Fullscreen",
+    print_screen: "Screenshot",
+    page_refresh: "Refresh halaman",
+    back_navigation: "Kembali ke halaman sebelumnya",
+    app_closed: "Menutup halaman ujian",
+  };
   const formatDate = (value) => {
     const date = new Date(value);
     return Number.isNaN(date.getTime())
@@ -1604,6 +1639,23 @@ function ExamDetail({ user, examId, returnToSchedule = false }) {
             : "Belum dipublish"}</dd></div>
           <div><dt>Jumlah Soal</dt><dd>{exam.questions.length}</dd></div>
         </dl>
+      </section>
+      <section className="teacher-panel admin-activity-panel">
+        <div className="teacher-panel-heading"><div><span>PEMANTAUAN UJIAN</span><h2>Aktivitas Peserta</h2></div></div>
+        {activityError && <div className="teacher-alert error" role="alert">{activityError}</div>}
+        {activityEvents.length ? <div className="admin-activity-list">
+          {[...activityEvents].reverse().map((event) => <article key={event.id}>
+            <span className="admin-activity-indicator" aria-hidden="true" />
+            <div>
+              <strong>{event.studentName} · {event.className ?? "Kelas tidak diketahui"}</strong>
+              <p>{new Date(event.occurredAt).toLocaleTimeString("id-ID", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })} {activityLabels[event.eventType] ?? event.eventType}</p>
+            </div>
+            <time dateTime={event.occurredAt}>Pelanggaran ke-{event.violationNumber}</time>
+          </article>)}
+        </div> : !activityError && <p className="teacher-empty">Belum ada aktivitas peserta.</p>}
       </section>
       <section className="teacher-panel teacher-exam-questions">
         <div className="teacher-panel-heading"><div><span>DAFTAR SOAL</span><h2>Soal Ujian <small>{exam.questions.length}</small></h2></div></div>
@@ -1650,7 +1702,7 @@ function ExamParticipants({ user, examId }) {
       <section className="teacher-panel admin-activity-panel">
         <div className="teacher-panel-heading"><div><span>{exam?.participantCount ?? students.length} SISWA</span><h2>Peserta dari Kelas Tujuan</h2></div></div>
         <div className="teacher-table-wrap"><table className="teacher-table"><thead><tr><th>Nama Siswa</th><th>Email</th><th>Kelas</th><th>Status Ujian</th></tr></thead>
-          <tbody>{students.map((student) => <tr key={student.studentId}><td>{student.fullName}</td><td>{student.email}</td><td>{student.className}</td><td>{student.resultId ? "Selesai" : "Belum mengerjakan"}</td></tr>)}
+          <tbody>{students.map((student) => <tr key={student.studentId}><td data-label="Nama Siswa">{student.fullName}</td><td data-label="Email">{student.email}</td><td data-label="Kelas">{student.className}</td><td data-label="Status Ujian">{student.resultId ? "Selesai" : "Belum mengerjakan"}</td></tr>)}
             {!students.length && <tr><td colSpan="4">Belum ada siswa yang terdaftar di kelas tujuan ujian.</td></tr>}
           </tbody>
         </table></div>
@@ -1684,10 +1736,10 @@ function ExamPreview({ user, examId }) {
   return (
     <TeacherShell active="Jadwal Ujian" user={user}>
       <a className="teacher-back-link" href={`/guru/ujian/${examId}`}><TeacherIcon name="back" /> Kembali ke Detail Ujian</a>
-      <PageTitle eyebrow="MODE PREVIEW · HANYA GURU" title="Preview Ujian Siswa" description={exam?.title ?? "Tampilan simulasi untuk memeriksa soal sebelum ujian dipublikasikan."} />
+      <PageTitle eyebrow="MODE PRATINJAU · HANYA GURU" title="Pratinjau Ujian Siswa" description={exam?.title ?? "Tampilan simulasi untuk memeriksa soal sebelum ujian dipublikasikan."} />
       {error && <div className="teacher-alert error" role="alert">{error}</div>}
       {exam && <div className="teacher-preview-banner"><TeacherIcon name="eye" /><span>Mode pratinjau. Jawaban yang dipilih hanya simulasi dan tidak disimpan sebagai hasil ujian.</span><b>{exam.durationMinutes} menit</b></div>}
-      {!exam ? <p className="teacher-empty">Memuat preview...</p> : <div className="teacher-preview-layout">
+      {!exam ? <p className="teacher-empty">Memuat pratinjau...</p> : <div className="teacher-preview-layout">
         <div className="teacher-preview-questions">
           {exam.questions.map((question) => (
             <article className="teacher-panel teacher-preview-question" key={question.id}>
@@ -1707,7 +1759,7 @@ function ExamPreview({ user, examId }) {
           ))}
           {exam.questions.length === 0 && <p className="teacher-empty">Belum ada soal di dalam paket ini.</p>}
         </div>
-        <aside className="teacher-panel teacher-preview-summary"><span>RINGKASAN</span><h3>{exam.title}</h3><p>{exam.gradeLevel} IPA · {exam.schoolName}</p><div><TeacherIcon name="clock" /> {exam.durationMinutes} menit</div><div><TeacherIcon name="questions" /> {exam.questions.length} soal pada draft</div><div><TeacherIcon name="students" /> {exam.participantCount} peserta</div><a className="teacher-secondary-button" href={`/guru/ujian/${exam.id}`}>Selesai Preview</a></aside>
+        <aside className="teacher-panel teacher-preview-summary"><span>RINGKASAN</span><h3>{exam.title}</h3><p>{exam.gradeLevel} IPA · {exam.schoolName}</p><div><TeacherIcon name="clock" /> {exam.durationMinutes} menit</div><div><TeacherIcon name="questions" /> {exam.questions.length} soal pada draf</div><div><TeacherIcon name="students" /> {exam.participantCount} peserta</div><a className="teacher-secondary-button" href={`/guru/ujian/${exam.id}`}>Selesai Pratinjau</a></aside>
       </div>}
     </TeacherShell>
   );
@@ -1752,7 +1804,7 @@ function ExamAnalytics({ user, examId }) {
         <section className="teacher-panel teacher-results-table">
           <div className="teacher-panel-heading"><div><span>DAFTAR NILAI</span><h2>Hasil Peserta</h2></div></div>
           <div className="teacher-table-scroll"><table><thead><tr><th>Nama Siswa</th><th>Kelas</th><th>Nilai</th><th>Benar</th><th>Salah</th><th>Kosong</th><th>Status Lulus</th></tr></thead><tbody>
-            {report.participants.map((participant) => <tr key={participant.studentId}><td>{participant.fullName}</td><td>{participant.className}</td><td>{participant.score ?? "—"}</td><td>{participant.correctCount ?? "—"}</td><td>{participant.wrongCount ?? "—"}</td><td>{participant.unansweredCount ?? "—"}</td><td><span className={`teacher-result-status ${participant.resultId ? (participant.passed ? "passed" : "failed") : "pending"}`}>{participant.resultId ? (participant.passed ? "Lulus" : "Belum tuntas") : "Belum mengerjakan"}</span></td></tr>)}
+            {report.participants.map((participant) => <tr key={participant.studentId}><td data-label="Nama Siswa">{participant.fullName}</td><td data-label="Kelas">{participant.className}</td><td data-label="Nilai">{participant.score ?? "—"}</td><td data-label="Benar">{participant.correctCount ?? "—"}</td><td data-label="Salah">{participant.wrongCount ?? "—"}</td><td data-label="Kosong">{participant.unansweredCount ?? "—"}</td><td data-label="Status Lulus"><span className={`teacher-result-status ${participant.resultId ? (participant.passed ? "passed" : "failed") : "pending"}`}>{participant.resultId ? (participant.passed ? "Lulus" : "Belum tuntas") : "Belum mengerjakan"}</span></td></tr>)}
             {report.participants.length === 0 && <tr><td colSpan="7">Belum ada peserta pada paket ujian ini.</td></tr>}
           </tbody></table></div>
         </section>
@@ -1808,7 +1860,7 @@ function QuestionImport({ user }) {
   }
   return (
     <TeacherShell active="Soal" user={user}>
-      <PageTitle eyebrow="IMPORT SOAL" title="Import Soal" description="Periksa preview, lalu teruskan soal untuk langsung dimasukkan ke ujian." />
+      <PageTitle eyebrow="IMPOR SOAL" title="Impor Soal" description="Periksa pratinjau, lalu teruskan soal untuk langsung dimasukkan ke ujian." />
       {errors.map((error) => <div className="teacher-alert error" role="alert" key={error}>{error}</div>)}
       <form className="teacher-panel teacher-import-panel" onSubmit={preview}>
         <label htmlFor="question-word-file">Unggah file Word (.docx)</label>
@@ -1823,10 +1875,10 @@ function QuestionImport({ user }) {
         {readingFile && <small role="status">Membaca teks dari dokumen Word...</small>}
         <label htmlFor="question-import-text">Format teks soal</label>
         <textarea id="question-import-text" rows="14" value={text} onChange={(event) => setText(event.target.value)} placeholder={"Soal:\nElektron valensi atom selenium (Se, Z = 34) yang terletak di orbital 4p dapat memiliki bilangan kuantum ...\n\nA. ...\nB. ...\nC. ...\nD. ...\nE. ...\n\nKunci: B"} required />
-        <button className="teacher-primary-button" type="submit">Preview Import Soal</button>
+        <button className="teacher-primary-button" type="submit">Pratinjau Impor Soal</button>
       </form>
       {questions.length > 0 && <section className="teacher-panel teacher-import-preview">
-        <div className="teacher-panel-heading"><div><span>PREVIEW IMPORT SOAL</span><h2>{questions.length} soal siap diperiksa</h2></div></div>
+        <div className="teacher-panel-heading"><div><span>PRATINJAU IMPOR SOAL</span><h2>{questions.length} soal siap diperiksa</h2></div></div>
         {questions.map((question, index) => <article key={`${index}-${question.prompt}`}>
           <strong className="nsolve-preserve-lines">{index + 1}. {question.prompt}</strong>
           {question.options.map((option) => <span className={`${option.isCorrect ? "correct " : ""}nsolve-preserve-lines`} key={option.label}>{option.label}. {option.content}{option.isCorrect ? " · Kunci" : ""}</span>)}
@@ -1854,7 +1906,7 @@ function TeacherParticipants({ user }) {
     <PageTitle eyebrow="PESERTA UJIAN" title="Peserta Ujian" description="Daftar siswa yang terdaftar pada paket ujian di sekolah Anda." />
     {error && <div className="teacher-alert error" role="alert">{error}</div>}
     <section className="teacher-panel teacher-results-table"><div className="teacher-table-scroll"><table><thead><tr><th>Nama Siswa</th><th>Email</th><th>Kelas</th><th>Paket Ujian</th><th>Status</th><th>Nilai</th></tr></thead><tbody>
-      {participants.map((participant) => <tr key={`${participant.examId}-${participant.studentId}`}><td>{participant.fullName}</td><td>{participant.email}</td><td>{participant.className}</td><td>{participant.examTitle}</td><td>{participant.status}</td><td>{participant.score ?? "—"}</td></tr>)}
+      {participants.map((participant) => <tr key={`${participant.examId}-${participant.studentId}`}><td data-label="Nama Siswa">{participant.fullName}</td><td data-label="Email">{participant.email}</td><td data-label="Kelas">{participant.className}</td><td data-label="Paket Ujian">{participant.examTitle}</td><td data-label="Status">{participant.status}</td><td data-label="Nilai">{participant.score ?? "—"}</td></tr>)}
       {!participants.length && !error && <tr><td colSpan="6">Belum ada peserta yang ditambahkan ke NSolve-Tech</td></tr>}
     </tbody></table></div></section>
   </TeacherShell>;
@@ -1882,7 +1934,7 @@ function TeacherResults({ user }) {
         ["Ketuntasan", `${report.summary.passRate}%`, "school"],
       ].map(([label, value, icon]) => <article className="teacher-stat-card" key={label}><span className={`teacher-stat-icon ${icon}`}><TeacherIcon name={icon} /></span><div><small>{label}</small><strong>{value}</strong></div></article>)}</div>
       <section className="teacher-panel teacher-results-table"><div className="teacher-panel-heading"><div><span>{report.summary.submissions} HASIL</span><h2>Nilai Peserta</h2></div></div><div className="teacher-table-scroll"><table><thead><tr><th>Nama Siswa</th><th>Paket Ujian</th><th>Kelas</th><th>Nilai</th><th>Benar</th><th>Salah</th><th>Kosong</th><th>Status Lulus</th></tr></thead><tbody>
-        {report.results.map((result) => <tr key={`${result.examId}-${result.fullName}`}><td>{result.fullName}</td><td><a href={`/guru/ujian/${result.examId}/analisis`}>{result.examTitle}</a></td><td>{result.className}</td><td>{result.score}</td><td>{result.correctCount}</td><td>{result.wrongCount}</td><td>{result.unansweredCount}</td><td><span className={`teacher-result-status ${result.passed ? "passed" : "failed"}`}>{result.passed ? "Lulus" : "Belum tuntas"}</span></td></tr>)}
+        {report.results.map((result) => <tr key={`${result.examId}-${result.fullName}`}><td data-label="Nama Siswa">{result.fullName}</td><td data-label="Paket Ujian"><a href={`/guru/ujian/${result.examId}/analisis`}>{result.examTitle}</a></td><td data-label="Kelas">{result.className}</td><td data-label="Nilai">{result.score}</td><td data-label="Benar">{result.correctCount}</td><td data-label="Salah">{result.wrongCount}</td><td data-label="Kosong">{result.unansweredCount}</td><td data-label="Status Lulus"><span className={`teacher-result-status ${result.passed ? "passed" : "failed"}`}>{result.passed ? "Lulus" : "Belum tuntas"}</span></td></tr>)}
         {!report.results.length && <tr><td colSpan="8">Belum ada hasil ujian.</td></tr>}
       </tbody></table></div></section>
     </>}
@@ -1982,7 +2034,7 @@ function TeacherProfile({ user }) {
               <div><dt>Mata Pelajaran</dt><dd>{profile.subject}</dd></div>
               <div><dt>Tahun Ajaran</dt><dd>{profile.academicYear ?? "2026/2027"}</dd></div>
             </dl>
-            <button type="button" className="teacher-primary-button teacher-profile-edit" onClick={() => setEditing(true)}>Edit Profil</button>
+            <button type="button" className="teacher-primary-button teacher-profile-edit" onClick={() => setEditing(true)}>Ubah Profil</button>
           </>
         )}
       </section>

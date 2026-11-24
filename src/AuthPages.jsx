@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import Brand from "./Brand.jsx";
+import PasswordInput from "./PasswordInput.jsx";
 import { studentApi } from "./student-api.js";
 import "./auth-pages.css";
 
@@ -157,15 +158,13 @@ export default function AuthPage({ mode, onAuthenticate }) {
           </label>
           <label>
             Kata sandi
-            <input
-              type="password"
+            <PasswordInput
               autoComplete={registering ? "new-password" : "current-password"}
               required
-              minLength={registering ? 8 : undefined}
+              maxLength={registering ? 128 : undefined}
               value={values.password}
               onChange={(event) => setValues({ ...values, password: event.target.value })}
             />
-            {registering && <small>Gunakan minimal 8 karakter.</small>}
           </label>
           {error && <p className="auth-error" role="alert">{error}</p>}
           <button type="submit" disabled={submitting}>

@@ -3887,6 +3887,21 @@
 }
 
 @media (max-width: 380px) {
+  .mobile-exam-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mobile-exam-controls button {
+    min-width: 0;
+    white-space: normal;
+  }
+
+  .mobile-exam-controls button:last-child {
+    grid-column: 1 / -1;
+    margin-left: 0;
+  }
+
   .site-mobile-main {
     padding: 0 10px;
   }
@@ -4629,6 +4644,13 @@
   .profile-intro p {
     font-size: 10px;
   }
+}
+
+.exam-activity-shield {
+  position: fixed;
+  z-index: 39;
+  inset: 0;
+  background: #000;
 }
 
 .activity-warning-backdrop {

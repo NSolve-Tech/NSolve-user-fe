@@ -53,9 +53,9 @@ export const adminApi = {
   ),
   users: (role) => request(`/api/admin/users${role ? `?role=${role}` : ""}`),
   createUser: (body) => request("/api/admin/users", { method: "POST", body }),
-  resetPassword: (id) => request(
+  resetPassword: (id, body) => request(
     `/api/admin/users/${encodeURIComponent(id)}/reset-password`,
-    { method: "POST", body: {} },
+    { method: "POST", body },
   ),
   passwordResetLogs: (id) => request(
     `/api/admin/users/${encodeURIComponent(id)}/password-resets`,

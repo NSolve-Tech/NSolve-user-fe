@@ -129,6 +129,6 @@ export function parseImportedQuestions(text) {
     if (missing.length) errors.push(`Soal ${index + 1}: lengkapi ${missing.join(", ")}.`);
     questions.push(item);
   });
-  if (questions.length > 100) errors.push("Import dibatasi maksimal 100 soal sekali unggah.");
+  if (questions.length > 100) errors.push("Impor dibatasi maksimal 100 soal sekali unggah.");
   return { questions, errors };
 }
