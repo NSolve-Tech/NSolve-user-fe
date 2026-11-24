@@ -117,17 +117,25 @@
 
 .student-footer {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: center;
+  gap: 5px 8px;
   min-height: 76px;
   margin-top: 24px;
+  padding: 14px 20px;
   background: #fff;
   color: #55605f;
   font-size: 12px;
+  text-align: center;
 }
 
 .student-footer strong {
   color: #344442;
+}
+
+.student-footer-divider {
+  color: #a7b5b4;
 }
 
 .subject-badge {
@@ -4349,6 +4357,11 @@
   margin-left: 238px;
 }
 
+.exam-taking-page > .student-footer {
+  width: 100%;
+  margin-left: 0;
+}
+
 .exam-taking-page .site-header,
 .exam-taking-page .student-sidebar,
 .result-page .student-sidebar,
@@ -4429,6 +4442,13 @@
 
   .student-footer {
     margin-left: 0;
+  }
+
+  .exam-taking-page > .student-footer {
+    min-height: 60px;
+    margin-top: 0;
+    padding: 12px 16px;
+    font-size: 11px;
   }
 
   .exam-taking-page .site-header {

@@ -19,13 +19,13 @@ const studentNavigation = [
 ];
 
 const iconMap = {
-  Kimia: chemistryIcon,
-  Fisika: physicsIcon,
-  Biologi: biologyIcon,
-  Matematika: mathIcon,
-  PPKN: civicsIcon,
-  "Seni Budaya": artIcon,
-  "Bahasa Indonesia": bahasaIndonesiaIcon,
+  kimia: chemistryIcon,
+  fisika: physicsIcon,
+  biologi: biologyIcon,
+  matematika: mathIcon,
+  ppkn: civicsIcon,
+  "seni budaya": artIcon,
+  "bahasa indonesia": bahasaIndonesiaIcon,
 };
 
 function useExamActivityMonitor(
@@ -270,11 +270,22 @@ function MobileNav({ active = "Beranda" }) {
 }
 
 function SiteFooter() {
-  return <footer className="student-footer">© 2026 All rights reserved&nbsp; | &nbsp;<strong>NSolve-Tech</strong></footer>;
+  return (
+    <footer className="student-footer">
+      <span>© 2026 All rights reserved</span>
+      <span className="student-footer-divider" aria-hidden="true">|</span>
+      <strong>NSolve-Tech</strong>
+    </footer>
+  );
 }
 
 function SubjectBadge({ name, className = "" }) {
-  const image = iconMap[name];
+  const key = name
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
+  const image = iconMap[key];
   return (
     <span className={`subject-badge ${className}`}>
       {image && <img src={image} alt={`Ikon ${name}`} />}

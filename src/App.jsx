@@ -286,20 +286,26 @@ function UpcomingExam({ exam, compact = false, onStart, starting }) {
   );
 }
 
-function LatestGrades({ results, loading, error }) {
+function LatestGrades({ results, loading, error, open, onToggle }) {
   return (
     <section className="grades-section">
       <div className="panel-heading grades-heading">
         <h2>Riwayat Ujian</h2>
-        <a href="/ujian/riwayat">Lihat Semua <span>›</span></a>
+        {!loading && !error && (
+          <DashboardToggle
+            open={open}
+            onToggle={onToggle}
+            controls="dashboard-exam-history"
+          />
+        )}
       </div>
-      <div className="grades-grid">
+      <div className="grades-grid" id="dashboard-exam-history" hidden={!open}>
         {loading && <p className="dashboard-data-message">Memuat hasil ujian...</p>}
         {!loading && error && <p className="dashboard-data-message error" role="alert">{error}</p>}
         {!loading && !error && results.length === 0 && (
           <p className="dashboard-data-message">Belum ada hasil ujian.</p>
         )}
-        {!loading && !error && results.slice(0, 3).map((result) => {
+        {!loading && !error && results.map((result) => {
           const subjectIcon = getSubjectIcon(result.subject);
           return (
             <article className="grade-card" key={result.id}>
@@ -321,6 +327,35 @@ function LatestGrades({ results, loading, error }) {
         })}
       </div>
     </section>
+  );
+}
+
+function DashboardToggle({ open, onToggle, controls }) {
+  return (
+    <button
+      className="dashboard-list-toggle"
+      type="button"
+      aria-expanded={open}
+      aria-controls={controls}
+      onClick={onToggle}
+    >
+      {open ? "Tutup daftar" : "Buka daftar"}
+      <svg className={open ? "expanded" : ""} aria-hidden="true" viewBox="0 0 16 16">
+        <path d="m4 6 4 4 4-4" />
+      </svg>
+    </button>
+  );
+}
+
+function DashboardEmptyState({ icon, title, description }) {
+  return (
+    <div className="dashboard-empty-state">
+      <span className="dashboard-empty-state-icon"><Icon name={icon} /></span>
+      <div>
+        <strong>{title}</strong>
+        <p>{description}</p>
+      </div>
+    </div>
   );
 }
 
@@ -437,10 +472,15 @@ function App() {
     error: null,
   });
   const [startingExamId, setStartingExamId] = useState(null);
+  const [openScheduledExams, setOpenScheduledExams] = useState(true);
+  const [openActiveExams, setOpenActiveExams] = useState(true);
+  const [openExamHistory, setOpenExamHistory] = useState(true);
   const [actionError, setActionError] = useState("");
   const [examTokenDialogId, setExamTokenDialogId] = useState(null);
   const [examToken, setExamToken] = useState("");
   const [examTokenError, setExamTokenError] = useState("");
+  const scheduledExams = dashboardData.exams.filter((exam) => exam.status === "scheduled");
+  const activeExams = dashboardData.exams.filter((exam) => exam.status === "active" && exam.canStart);
 
   useEffect(() => {
     let active = true;
@@ -669,17 +709,29 @@ function App() {
           <section className="upcoming-section">
             <div className="section-title-row">
               <h2>Ujian Akan Datang</h2>
-              <a href="/ujian">Lihat Semua Jadwal <span>›</span></a>
+              {!dashboardData.loading && !dashboardData.error && (
+                <DashboardToggle
+                  open={openScheduledExams}
+                  onToggle={() => setOpenScheduledExams((open) => !open)}
+                  controls="dashboard-upcoming-exams"
+                />
+              )}
             </div>
-            <div className="upcoming-grid">
+            <div className="upcoming-grid" id="dashboard-upcoming-exams" hidden={!openScheduledExams}>
               {dashboardData.loading && <p className="dashboard-data-message">Memuat jadwal ujian...</p>}
               {!dashboardData.loading && dashboardData.error && (
                 <p className="dashboard-data-message error" role="alert">{dashboardData.error}</p>
               )}
-              {!dashboardData.loading && !dashboardData.error && dashboardData.exams.filter((exam) => exam.status === "scheduled").length === 0 && (
-                <p className="dashboard-data-message">{dashboardData.exams.length === 0 ? "Belum ada ujian yang tersedia untuk kelas Anda." : "Belum ada ujian yang dijadwalkan."}</p>
+              {!dashboardData.loading && !dashboardData.error && scheduledExams.length === 0 && (
+                <DashboardEmptyState
+                  icon="calendar"
+                  title={dashboardData.exams.length === 0 ? "Belum ada ujian" : "Belum ada ujian terjadwal"}
+                  description={dashboardData.exams.length === 0
+                    ? "Jadwal ujian untuk kelas Anda akan muncul di sini."
+                    : "Ujian yang sudah dijadwalkan akan muncul di sini."}
+                />
               )}
-              {!dashboardData.loading && !dashboardData.error && dashboardData.exams.filter((exam) => exam.status === "scheduled").slice(0, 2).map((exam, index) => (
+              {!dashboardData.loading && !dashboardData.error && scheduledExams.map((exam, index) => (
                 <UpcomingExam
                   key={exam.id}
                   exam={exam}
@@ -695,13 +747,23 @@ function App() {
           <section className="upcoming-section">
             <div className="section-title-row">
               <h2>Ujian Aktif</h2>
-              <a href="/ujian">Lihat Semua <span>›</span></a>
-            </div>
-            <div className="upcoming-grid">
-              {!dashboardData.loading && !dashboardData.error && dashboardData.exams.filter((exam) => exam.status === "active" && exam.canStart).length === 0 && (
-                <p className="dashboard-data-message">Belum ada ujian aktif.</p>
+              {!dashboardData.loading && !dashboardData.error && (
+                <DashboardToggle
+                  open={openActiveExams}
+                  onToggle={() => setOpenActiveExams((open) => !open)}
+                  controls="dashboard-active-exams"
+                />
               )}
-              {dashboardData.exams.filter((exam) => exam.status === "active" && exam.canStart).slice(0, 2).map((exam, index) => (
+            </div>
+            <div className="upcoming-grid" id="dashboard-active-exams" hidden={!openActiveExams}>
+              {!dashboardData.loading && !dashboardData.error && activeExams.length === 0 && (
+                <DashboardEmptyState
+                  icon="exam"
+                  title="Belum ada ujian aktif"
+                  description="Ujian yang sedang berlangsung akan muncul di sini."
+                />
+              )}
+              {activeExams.map((exam, index) => (
                 <UpcomingExam key={exam.id} exam={exam} compact={index > 0} onStart={handleStartExam} starting={startingExamId === exam.id} />
               ))}
             </div>
@@ -710,6 +772,8 @@ function App() {
             results={dashboardData.results}
             loading={dashboardData.loading}
             error={dashboardData.error}
+            open={openExamHistory}
+            onToggle={() => setOpenExamHistory((open) => !open)}
           />
           <footer className="page-footer">
             © 2026 All rights reserved&nbsp; | &nbsp;<strong>NSolve-Tech</strong>
