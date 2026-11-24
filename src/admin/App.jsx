@@ -770,7 +770,7 @@ function ActivityPage() {
     <section className="panel table-panel">
       <div className="panel-heading"><div><span>SESI AKTIF</span><h2>Sesi Ujian Berlangsung</h2></div></div>
       <Alert error={error} />
-      <div className="table-scroll"><table><thead><tr><th>Siswa</th><th>Kelas</th><th>Ujian</th><th>Mulai</th><th>Status Sesi</th><th>Pelanggaran</th></tr></thead><tbody>
+      <div className="table-scroll"><table><thead><tr><th>Siswa</th><th>Kelas</th><th>Ujian</th><th>Mulai</th><th>Status Sesi</th><th>Soal di Aktivitas Terakhir</th><th>Pelanggaran</th></tr></thead><tbody>
         {sessions.map((session) => {
           const frozen = session.lockedUntil && Date.parse(session.lockedUntil) > Date.now();
           const status = session.disqualifiedAt ? "Perlu verifikasi"
@@ -781,17 +781,24 @@ function ActivityPage() {
             <td>{session.studentName}</td><td>{session.className ?? "—"}</td>
             <td>{session.examTitle}</td><td>{new Date(session.startedAt).toLocaleString("id-ID")}</td>
             <td>{status}{session.lastEventType ? ` · ${eventLabels[session.lastEventType] ?? session.lastEventType} (${new Date(session.lastEventAt).toLocaleString("id-ID")})` : ""}</td>
+            <td>{session.lastQuestionNumber ? `Soal ${session.lastQuestionNumber}` : "—"}</td>
             <td>{session.violationCount}</td>
           </tr>;
         })}
-        {!sessions.length && !error && <tr><td colSpan="6">Tidak ada sesi ujian yang sedang berlangsung.</td></tr>}
+        {!sessions.length && !error && <tr><td colSpan="7">Tidak ada sesi ujian yang sedang berlangsung.</td></tr>}
       </tbody></table></div>
     </section>
     <section className="panel table-panel">
       <div className="panel-heading"><div><span>PEMANTAUAN AKTIVITAS</span><h2>Notifikasi Pelanggaran</h2></div></div>
-      <div className="table-scroll"><table><thead><tr><th>Siswa</th><th>Kelas</th><th>Ujian</th><th>Aktivitas</th><th>Pelanggaran</th><th>Waktu</th></tr></thead><tbody>
-        {events.map((event) => <tr key={event.id}><td>{event.studentName}</td><td>{event.className ?? "—"}</td><td>{event.examTitle}</td><td>{eventLabels[event.eventType] ?? event.eventType}</td><td>{event.violationNumber}</td><td>{new Date(event.occurredAt).toLocaleString("id-ID")}</td></tr>)}
-        {!events.length && !error && <tr><td colSpan="6">Belum ada aktivitas yang dilaporkan.</td></tr>}
+      <div className="table-scroll"><table><thead><tr><th>Siswa</th><th>Kelas</th><th>Ujian</th><th>Aktivitas</th><th>Soal saat Aktivitas</th><th>Pelanggaran</th><th>Waktu</th></tr></thead><tbody>
+        {events.map((event) => <tr key={event.id}>
+          <td>{event.studentName}</td><td>{event.className ?? "—"}</td><td>{event.examTitle}</td>
+          <td>{eventLabels[event.eventType] ?? event.eventType}{event.autoSubmitted ? " · Ujian dikumpulkan otomatis" : ""}</td>
+          <td>{event.questionNumber ? `Soal ${event.questionNumber}` : event.attemptId ? "—" : "Sebelum ujian"}</td>
+          <td>{event.attemptId ? `${event.violationNumber} dari 3` : `Praujian · ${event.violationNumber}`}</td>
+          <td>{new Date(event.occurredAt).toLocaleString("id-ID")}</td>
+        </tr>)}
+        {!events.length && !error && <tr><td colSpan="7">Belum ada aktivitas yang dilaporkan.</td></tr>}
       </tbody></table></div>
     </section>
   </>;

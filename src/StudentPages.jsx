@@ -28,9 +28,22 @@ const iconMap = {
   "Bahasa Indonesia": bahasaIndonesiaIcon,
 };
 
-function useExamActivityMonitor(examId, attemptId, enabled, onViolation) {
+function useExamActivityMonitor(
+  examId,
+  attemptId,
+  enabled,
+  onViolation,
+  questionNumber,
+  beforeReport,
+) {
   const callbackRef = useRef(onViolation);
+  const questionNumberRef = useRef(questionNumber);
+  const beforeReportRef = useRef(beforeReport);
   useEffect(() => { callbackRef.current = onViolation; }, [onViolation]);
+  useEffect(() => {
+    questionNumberRef.current = questionNumber;
+    beforeReportRef.current = beforeReport;
+  }, [beforeReport, questionNumber]);
   useEffect(() => {
     if (!enabled || !examId) return undefined;
     let lastReportedAt = 0;
@@ -41,9 +54,14 @@ function useExamActivityMonitor(examId, attemptId, enabled, onViolation) {
       const currentTime = Date.now();
       if (eventType !== "app_closed" && currentTime - lastReportedAt < 2000) return;
       lastReportedAt = currentTime;
+      const currentQuestionNumber = questionNumberRef.current;
       try {
+        if (!keepalive) await beforeReportRef.current?.();
         const activity = await studentApi.reportExamActivity(examId, {
           ...(attemptId ? { attemptId } : {}),
+          ...(attemptId && currentQuestionNumber
+            ? { questionNumber: currentQuestionNumber }
+            : {}),
           eventType,
         }, keepalive ? { keepalive: true } : undefined);
         if (notify && !disposed) {
@@ -119,7 +137,9 @@ export function ActivityWarning({ activity, onClose, frozen = false }) {
     <section className="activity-warning" role="alertdialog" aria-modal="true" aria-labelledby="activity-warning-title">
       <span className="activity-warning-icon"><UiIcon name="warning" /></span>
       <h2 id="activity-warning-title">Aktivitas ujian terdeteksi</h2>
-      <p>{eventLabels[activity.eventType] ?? "Aktivitas browser"} tercatat. Deteksi browser bersifat terbatas dan tidak dapat menjamin semua screenshot tertangkap.</p>
+      <p>{activity.autoSubmitted
+        ? "Pelanggaran ketiga tercatat. Ujian dihentikan otomatis dan jawaban yang sudah tersimpan telah dinilai."
+        : `${eventLabels[activity.eventType] ?? "Aktivitas browser"} tercatat. Deteksi browser bersifat terbatas dan tidak dapat menjamin semua screenshot tertangkap.`}</p>
       {activity.violationCount && <strong className="activity-warning-count">Pelanggaran {activity.violationCount} dari 3</strong>}
       {activity.disqualified && <p className="activity-warning-error">Sesi ditandai untuk verifikasi administrator. Akses ke soal telah dihentikan.</p>}
       {frozen && !activity.disqualified && <p className="activity-warning-error">Sesi dibekukan sementara. Jawaban akan dapat dilanjutkan setelah masa pembekuan berakhir.</p>}
@@ -785,7 +805,35 @@ function ExamPage({ drawer = false, search = "", user, onLogout }) {
   const [clock, setClock] = useState(Date.now());
   const saveQueue = useRef(new Map());
   const submissionStarted = useRef(false);
-  useExamActivityMonitor(exam?.id, attempt?.id, Boolean(exam && attempt), setActivityWarning);
+  const autoSubmitNavigationStarted = useRef(false);
+
+  function flushPendingAnswers() {
+    return Promise.allSettled([...saveQueue.current.values()]);
+  }
+
+  function handleExamActivity(activity) {
+    if (activity.autoSubmitted && activity.resultId &&
+        !autoSubmitNavigationStarted.current) {
+      autoSubmitNavigationStarted.current = true;
+      submissionStarted.current = true;
+      setActivityWarning({ ...activity, autoSubmitted: true });
+      window.setTimeout(() => navigateAfterExam({
+        id: activity.resultId,
+        showScore: activity.showScore,
+      }), 1500);
+      return;
+    }
+    setActivityWarning(activity);
+  }
+
+  useExamActivityMonitor(
+    exam?.id,
+    attempt?.id,
+    Boolean(exam && attempt),
+    handleExamActivity,
+    currentNumber,
+    flushPendingAnswers,
+  );
 
   useEffect(() => {
     let active = true;

@@ -54,8 +54,14 @@ dan hindari berpindah tab atau jendela. Perpindahan tab, hilangnya fokus jendela
 keluar dari layar penuh, atau tombol `PrintScreen` tertentu dapat tercatat. Saat
 browser mendeteksi aktivitas, portal menampilkan peringatan dengan latar gelap;
 perangkat yang mendukung getaran browser dapat bergetar. Aktivitas berulang saat
-ujian berlangsung dapat membekukan sesi sementara atau membuat sesi ditandai
-untuk verifikasi administrator.
+ujian berlangsung dapat membekukan sesi sementara. Pada pelanggaran ketiga
+selama ujian, percobaan akan dikumpulkan otomatis dan dinilai dari jawaban yang
+berhasil tersimpan. Jika guru menyembunyikan nilai, hasil tetap tersimpan tetapi
+skor tidak ditampilkan kepada siswa.
+
+Aktivitas sebelum ujian dimulai, misalnya saat memasukkan token, dapat tercatat
+tanpa nomor soal karena belum ada soal yang dikerjakan. Hitungan pelanggaran
+untuk pengumpulan otomatis dimulai saat percobaan ujian aktif.
 
 Pemantauan browser bersifat terbatas dan tidak dapat menjamin semua screenshot
 atau rekaman layar terdeteksi. Screenshot yang diambil langsung melalui tombol
