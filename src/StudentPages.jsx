@@ -107,7 +107,7 @@ function navigateAfterExam(result) {
   window.location.assign(`/ujian/selesai?id=${encodeURIComponent(result.id)}`);
 }
 
-function ActivityWarning({ activity, onClose, frozen = false }) {
+export function ActivityWarning({ activity, onClose, frozen = false }) {
   if (!activity) return null;
   const eventLabels = {
     tab_hidden: "Perpindahan tab",

@@ -8,7 +8,7 @@ import civicsIcon from "./icon/PPKN.png";
 import physicsIcon from "./icon/FISIKA.png";
 import chemistryIcon from "./icon/KIMIA.png";
 import Brand from "./Brand.jsx";
-import StudentPages from "./StudentPages.jsx";
+import StudentPages, { ActivityWarning } from "./StudentPages.jsx";
 import TeacherPages, { TeacherShell } from "./TeacherPages.jsx";
 import AuthPage from "./AuthPages.jsx";
 import { studentApi } from "./student-api.js";
@@ -391,10 +391,10 @@ function ExamTokenDialog({ examId, onClose, onSubmit, token, onTokenChange, erro
         <span className="exam-token-icon"><Icon name="lock" /></span>
         <h2 id="exam-token-title">Masuk Ruang Ujian</h2>
         <p>Masukkan token yang diberikan guru untuk memulai ujian.</p>
-        {activityWarning && <p className="exam-token-error" role="alert">
-          Aktivitas {activityWarning.eventType.replaceAll("_", " ")} terdeteksi dan dicatat.
-          {activityWarning.error ? ` ${activityWarning.error}` : ""}
-        </p>}
+        <ActivityWarning
+          activity={activityWarning}
+          onClose={() => setActivityWarning(null)}
+        />
         <form onSubmit={onSubmit}>
           <label htmlFor="exam-token-input">Token Ujian</label>
           <input

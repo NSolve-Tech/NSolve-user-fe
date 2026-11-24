@@ -49,14 +49,20 @@ internet stabil dan periksa indikator penyimpanan sebelum mengumpulkan.
 
 ### Tata tertib dan pemantauan browser
 
-Selama ujian, tetap berada di halaman ujian dan hindari berpindah tab atau
-jendela. Perpindahan tab, hilangnya fokus jendela, keluar dari layar penuh, atau
-tombol screenshot tertentu dapat tercatat. Aktivitas berulang dapat membekukan
-sesi sementara atau membuat sesi ditandai untuk verifikasi administrator.
+Saat memasukkan token maupun mengerjakan ujian, tetap berada di halaman portal
+dan hindari berpindah tab atau jendela. Perpindahan tab, hilangnya fokus jendela,
+keluar dari layar penuh, atau tombol `PrintScreen` tertentu dapat tercatat. Saat
+browser mendeteksi aktivitas, portal menampilkan peringatan dengan latar gelap;
+perangkat yang mendukung getaran browser dapat bergetar. Aktivitas berulang saat
+ujian berlangsung dapat membekukan sesi sementara atau membuat sesi ditandai
+untuk verifikasi administrator.
 
 Pemantauan browser bersifat terbatas dan tidak dapat menjamin semua screenshot
-atau rekaman layar terdeteksi. Jika sesi dibekukan atau soal tidak dapat dibuka,
-baca pemberitahuan di layar dan hubungi guru atau administrator sekolah.
+atau rekaman layar terdeteksi. Screenshot yang diambil langsung melalui tombol
+fisik atau fitur sistem operasi mungkin tidak memberi sinyal apa pun ke situs.
+Situs juga tidak dapat memaksa layar gelap atau getaran pada semua perangkat.
+Jika sesi dibekukan atau soal tidak dapat dibuka, baca pemberitahuan di layar dan
+hubungi guru atau administrator sekolah.
 
 ## 4. Melihat hasil dan nilai
 
