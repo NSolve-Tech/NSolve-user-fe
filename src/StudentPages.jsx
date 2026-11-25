@@ -52,6 +52,9 @@ function useExamActivityMonitor(
     let lastReportedAt = 0;
     let disposed = false;
     let leavingPage = false;
+    let hasEnteredFullscreen = Boolean(
+      document.fullscreenElement ?? document.webkitFullscreenElement,
+    );
     const report = async (eventType, { keepalive = false, notify = true } = {}) => {
       const currentTime = Date.now();
       if (!["app_closed", "page_refresh", "back_navigation"].includes(eventType) &&
@@ -107,7 +110,12 @@ function useExamActivityMonitor(
       }
     };
     const onFullscreenChange = () => {
-      if (!leavingPage && !document.fullscreenElement) {
+      const fullscreenElement = document.fullscreenElement ?? document.webkitFullscreenElement;
+      if (fullscreenElement) {
+        hasEnteredFullscreen = true;
+        return;
+      }
+      if (!leavingPage && hasEnteredFullscreen) {
         shieldRef.current?.();
         scheduleReport("fullscreen_exit");
       }
@@ -146,6 +154,7 @@ function useExamActivityMonitor(
     }
     document.addEventListener("visibilitychange", onVisibilityChange);
     document.addEventListener("fullscreenchange", onFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", onFullscreenChange);
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("blur", onBlur);
     window.addEventListener("popstate", onBackNavigation);
@@ -155,6 +164,7 @@ function useExamActivityMonitor(
       disposed = true;
       document.removeEventListener("visibilitychange", onVisibilityChange);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
+      document.removeEventListener("webkitfullscreenchange", onFullscreenChange);
       window.removeEventListener("keydown", onKeyDown);
       window.removeEventListener("blur", onBlur);
       window.removeEventListener("popstate", onBackNavigation);
@@ -920,6 +930,10 @@ function ExamPage({ drawer = false, search = "", user, onLogout }) {
   const [submitting, setSubmitting] = useState(false);
   const [confirmSubmit, setConfirmSubmit] = useState(false);
   const [activityWarning, setActivityWarning] = useState(null);
+  const [fullscreenReady, setFullscreenReady] = useState(false);
+  const [fullscreenBypassed, setFullscreenBypassed] = useState(false);
+  const [examViewStarted, setExamViewStarted] = useState(false);
+  const [fullscreenError, setFullscreenError] = useState("");
   const [clock, setClock] = useState(Date.now());
   const saveQueue = useRef(new Map());
   const submissionStarted = useRef(false);
@@ -946,8 +960,39 @@ function ExamPage({ drawer = false, search = "", user, onLogout }) {
     return Promise.allSettled([...saveQueue.current.values()]);
   }
 
+  async function startExamView() {
+    setFullscreenError("");
+    const root = document.documentElement;
+    const requestFullscreen = root.requestFullscreen ?? root.webkitRequestFullscreen;
+    if (typeof requestFullscreen !== "function") {
+      setFullscreenError("Browser ini tidak mendukung mode layar penuh untuk halaman ujian.");
+      return;
+    }
+
+    try {
+      await requestFullscreen.call(root);
+      await new Promise((resolve) => window.requestAnimationFrame(resolve));
+      if (!(document.fullscreenElement ?? document.webkitFullscreenElement)) {
+        setFullscreenError("Browser tidak berhasil mengaktifkan mode layar penuh.");
+        return;
+      }
+      setFullscreenBypassed(false);
+      setExamViewStarted(true);
+      setFullscreenReady(true);
+    } catch (requestError) {
+      setFullscreenError(
+        requestError instanceof Error
+          ? `Mode layar penuh tidak diizinkan: ${requestError.message}`
+          : "Mode layar penuh tidak diizinkan oleh browser.",
+      );
+    }
+  }
+
   function handleExamActivity(activity) {
     hideActivityShield();
+    if (activity.eventType === "fullscreen_exit" && !fullscreenBypassed) {
+      setFullscreenReady(false);
+    }
     if (activity.autoSubmitted && activity.resultId &&
         !autoSubmitNavigationStarted.current) {
       autoSubmitNavigationStarted.current = true;
@@ -965,7 +1010,7 @@ function ExamPage({ drawer = false, search = "", user, onLogout }) {
   useExamActivityMonitor(
     exam?.id,
     attempt?.id,
-    Boolean(exam && attempt),
+    Boolean(exam && attempt && fullscreenReady),
     handleExamActivity,
     currentNumber,
     flushPendingAnswers,
@@ -1131,61 +1176,81 @@ function ExamPage({ drawer = false, search = "", user, onLogout }) {
         <div className="exam-timer">SISA WAKTU<strong>◷ {formatCountdown(remainingSeconds)}</strong></div>
       </section>}
       <main className="exam-taking-content">
-        <section className="question-card">
-          {loading && <p className="student-data-message">Memuat soal ujian...</p>}
-          {error && <p className="student-data-message error" role="alert">{error}</p>}
-          {!loading && !error && currentQuestion && <>
-            <header>
-              <span>Soal No. {currentQuestion.number}</span>
-              <small>dari total {questions.length} Butir Soal</small>
-              <b>Pilihan Ganda</b>
-              <button className="flag-button" type="button">⚐ Tandai Ragu-Ragu</button>
-              <a className="mobile-question-list" href={`/ujian/daftar-soal?examId=${encodeURIComponent(exam.id)}&attemptId=${encodeURIComponent(attempt.id)}`}>▦ Daftar Soal</a>
-            </header>
-            <div className="question-prompt"><p>{currentQuestion.prompt}</p></div>
-            <div className="answer-options">
-              {currentQuestion.options.map((option) => (
-                <button
-                  className={currentQuestion.selectedOptionId === option.id ? "selected" : ""}
-                  key={option.id}
-                  type="button"
-                  disabled={isFrozen || isDisqualified}
-                  onClick={() => saveAnswer(currentQuestion.id, option.id)}
-                >
-                  <b>{option.label}</b><span>{option.content}</span>
-                  {currentQuestion.selectedOptionId === option.id && <UiIcon name="check" />}
-                </button>
-              ))}
+        {loading && <section className="question-card"><p className="student-data-message">Memuat soal ujian...</p></section>}
+        {error && <section className="question-card"><p className="student-data-message error" role="alert">{error}</p></section>}
+        {!loading && !error && !fullscreenReady && <section className="exam-entry-gate" role="dialog" aria-modal="true" aria-labelledby="exam-entry-title">
+          <span className="exam-entry-gate-icon"><UiIcon name="lock" size={24} /></span>
+          <h2 id="exam-entry-title">{examViewStarted ? "Lanjutkan Ujian" : "Persiapan Ruang Ujian"}</h2>
+          <p>{examViewStarted
+            ? "Layar penuh telah ditutup. Aktifkan kembali untuk melanjutkan ujian."
+            : "Aktifkan layar penuh sebelum mulai. Jika Anda berpindah aplikasi atau tab, layar ujian akan ditutup dan aktivitas dicatat."}</p>
+          {fullscreenError && <p className="exam-entry-gate-error" role="alert">{fullscreenError}</p>}
+          <button type="button" onClick={startExamView}>{examViewStarted ? "Izinkan & Lanjutkan" : "Izinkan & Mulai Ujian"}</button>
+          {fullscreenError && <button className="exam-entry-gate-continue" type="button" onClick={() => {
+            setFullscreenBypassed(true);
+            setExamViewStarted(true);
+            setFullscreenReady(true);
+          }}>
+            Lanjut tanpa layar penuh
+          </button>}
+        </section>}
+        {!loading && !error && fullscreenReady && <>
+          <section className="question-card">
+            {currentQuestion && <>
+              <header>
+                <span>Soal No. {currentQuestion.number}</span>
+                <small>dari total {questions.length} Butir Soal</small>
+                <b>Pilihan Ganda</b>
+                <button className="flag-button" type="button">⚐ Tandai Ragu-Ragu</button>
+                <a className="mobile-question-list" href={`/ujian/daftar-soal?examId=${encodeURIComponent(exam.id)}&attemptId=${encodeURIComponent(attempt.id)}`}>▦ Daftar Soal</a>
+              </header>
+              <div className="question-prompt"><p>{currentQuestion.prompt}</p></div>
+              <div className="answer-options">
+                {currentQuestion.options.map((option) => (
+                  <button
+                    className={currentQuestion.selectedOptionId === option.id ? "selected" : ""}
+                    key={option.id}
+                    type="button"
+                    disabled={isFrozen || isDisqualified}
+                    onClick={() => saveAnswer(currentQuestion.id, option.id)}
+                  >
+                    <b>{option.label}</b><span>{option.content}</span>
+                    {currentQuestion.selectedOptionId === option.id && <UiIcon name="check" />}
+                  </button>
+                ))}
+              </div>
+              <p className={`autosave-note ${saveMessage.startsWith("Gagal") ? "error" : ""}`} role="status">
+                ♧ {saveMessage || "Jawaban disimpan otomatis saat Anda memilih opsi."}
+              </p>
+            </>}
+          </section>
+          <aside className="question-navigation">
+            <h2>▦ Navigasi Soal <small>{questions.length} Butir</small></h2>
+            <QuestionGrid questions={questions} currentNumber={currentNumber} onSelect={selectQuestion} />
+            <div className="question-legend">
+              <strong>Keterangan Status Soal:</strong>
+              <span>● Sudah Dijawab ({answeredCount})</span>
+              <span>● Belum Dijawab ({questions.length - answeredCount})</span>
             </div>
-            <p className={`autosave-note ${saveMessage.startsWith("Gagal") ? "error" : ""}`} role="status">
-              ♧ {saveMessage || "Jawaban disimpan otomatis saat Anda memilih opsi."}
-            </p>
-          </>}
-        </section>
-        <aside className="question-navigation">
-          <h2>▦ Navigasi Soal <small>{questions.length} Butir</small></h2>
-          <QuestionGrid questions={questions} currentNumber={currentNumber} onSelect={selectQuestion} />
-          <div className="question-legend">
-            <strong>Keterangan Status Soal:</strong>
-            <span>● Sudah Dijawab ({answeredCount})</span>
-            <span>● Belum Dijawab ({questions.length - answeredCount})</span>
-          </div>
-          <button type="button" onClick={() => setConfirmSubmit(true)}>☑ Selesai &amp; Kumpulkan</button>
-        </aside>
-        <nav className="question-controls">
-          <button type="button" disabled={currentNumber <= 1} onClick={() => selectQuestion(currentNumber - 1)}>← Sebelumnya</button>
-          <span />
-          <button type="button" disabled={currentNumber >= questions.length} onClick={() => selectQuestion(currentNumber + 1)}>Selanjutnya →</button>
-          <button type="button" onClick={() => setConfirmSubmit(true)}>☑ Kumpulkan Ujian</button>
-        </nav>
+            <button type="button" onClick={() => setConfirmSubmit(true)}>☑ Selesai &amp; Kumpulkan</button>
+          </aside>
+          <nav className="question-controls">
+            <button type="button" disabled={currentNumber <= 1} onClick={() => selectQuestion(currentNumber - 1)}>← Sebelumnya</button>
+            <span />
+            <button type="button" disabled={currentNumber >= questions.length} onClick={() => selectQuestion(currentNumber + 1)}>Selanjutnya →</button>
+            <button type="button" onClick={() => setConfirmSubmit(true)}>☑ Kumpulkan Ujian</button>
+          </nav>
+        </>}
       </main>
       <SiteFooter />
       <div className="mobile-exam-controls">
-        <button type="button" disabled={currentNumber <= 1} onClick={() => selectQuestion(currentNumber - 1)}>‹　Sebelumnya</button>
-        <button type="button" disabled={currentNumber >= questions.length} onClick={() => selectQuestion(currentNumber + 1)}>Selanjutnya　›</button>
-        <button type="button" onClick={() => setConfirmSubmit(true)}>☑ Kumpulkan Jawaban</button>
+        {fullscreenReady && <>
+          <button type="button" disabled={currentNumber <= 1} onClick={() => selectQuestion(currentNumber - 1)}>‹　Sebelumnya</button>
+          <button type="button" disabled={currentNumber >= questions.length} onClick={() => selectQuestion(currentNumber + 1)}>Selanjutnya　›</button>
+          <button type="button" onClick={() => setConfirmSubmit(true)}>☑ Kumpulkan Jawaban</button>
+        </>}
       </div>
-      {drawer && <QuestionDrawer
+      {drawer && fullscreenReady && <QuestionDrawer
         questions={questions}
         currentNumber={currentNumber}
         onSelect={(number) => selectQuestion(number)}

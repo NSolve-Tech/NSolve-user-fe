@@ -1663,6 +1663,68 @@
   background: #f1f9fd;
 }
 
+.exam-entry-gate {
+  grid-column: 1 / -1;
+  width: min(100%, 520px);
+  justify-self: center;
+  margin: clamp(24px, 8vh, 64px) auto;
+  padding: 32px;
+  border: 1px solid #e4ebf0;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 12px 32px rgb(34 62 81 / 8%);
+  text-align: center;
+}
+
+.exam-entry-gate-icon {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  margin: 0 auto 15px;
+  place-items: center;
+  border-radius: 50%;
+  background: #e8f4f3;
+  color: #155e60;
+}
+
+.exam-entry-gate h2 {
+  margin: 0 0 10px;
+  color: #203246;
+  font-size: 20px;
+}
+
+.exam-entry-gate p {
+  margin: 0 auto 18px;
+  color: #657483;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.exam-entry-gate .exam-entry-gate-error {
+  color: #a93535;
+}
+
+.exam-entry-gate button {
+  display: block;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-radius: 9px;
+  background: #155e60;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.exam-entry-gate .exam-entry-gate-continue {
+  margin-top: 10px;
+  border: 1px solid #d5dee6;
+  background: #fff;
+  color: #35485a;
+}
+
 .exam-taking-content {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 395px;
