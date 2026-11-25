@@ -846,7 +846,7 @@ const wizardSteps = [
   "Token",
   "Input Soal",
   "Pratinjau",
-  "Terbitkan",
+  "Submit Soal",
 ];
 
 function createQuestionDraft(type) {
@@ -1560,7 +1560,7 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
         )}
         {step === 8 && (
           <>
-            <div className="teacher-panel-heading"><div><span>LANGKAH 9</span><h2>{isEditing ? "Simpan Perubahan" : "Terbitkan Soal"}</h2></div></div>
+            <div className="teacher-panel-heading"><div><span>LANGKAH 9</span><h2>{isEditing ? "Simpan Perubahan" : "Submit Soal"}</h2></div></div>
             {token ? (
               <div className="teacher-token-result" role="status">
                 <span>Ujian berhasil dipublish</span>
@@ -1573,7 +1573,7 @@ function TeacherExamWizard({ user, examId = null, returnToSchedule = false }) {
               <div className="teacher-publish-confirm">
                 <p><strong>{form.title || "Judul Soal"}</strong> {isEditing ? "akan disimpan kembali" : `akan dipublish untuk ${selectedClassIds.length} kelas dengan status ${form.startMode === "now" ? "aktif" : "terjadwal"}`}.</p>
                 <p>{isEditing ? "Perubahan akan langsung tersimpan pada data ujian." : tokenMode === "custom" ? `Token ${editToken} akan digunakan untuk masuk ke ujian.` : "Token masuk siswa akan dibuat otomatis setelah publish."}</p>
-                <button className="teacher-primary-button" type="button" onClick={publish} disabled={saving}>{saving ? "Menyimpan..." : isEditing ? "Simpan Perubahan" : "Terbitkan Soal"}</button>
+                <button className="teacher-primary-button" type="button" onClick={publish} disabled={saving}>{saving ? "Menyimpan..." : isEditing ? "Simpan Perubahan" : "Submit Soal"}</button>
               </div>
             )}
           </>

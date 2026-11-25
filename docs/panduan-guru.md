@@ -45,7 +45,7 @@ administrator sekolah.
      jawaban dan bobot nilai.
    - **Preview**: periksa tampilan soal dan pilihan seperti yang akan dilihat
      siswa.
-   - **Publish**: periksa kembali pengaturan, lalu terbitkan ujian.
+   - **Publish**: periksa kembali pengaturan, lalu submit ujian.
 
    Wizard membatasi satu ujian hingga 100 pertanyaan. Teks pertanyaan minimal
    10 karakter. Pilih urutan soal sesuai susunan guru atau acak per siswa pada
