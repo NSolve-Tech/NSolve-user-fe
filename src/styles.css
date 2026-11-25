@@ -603,6 +603,10 @@ a {
   gap: 5px;
 }
 
+.exam-detail-questions {
+  display: none;
+}
+
 .exam-details svg,
 .compact-footer svg {
   width: 13px;
@@ -1823,5 +1827,186 @@ a {
 
   .dashboard-data-message {
     font-size: 11px;
+  }
+}
+
+@media (max-width: 700px) {
+  .exam-card:not(.exam-card-compact) {
+    height: auto;
+    min-height: 0;
+    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-rows: auto auto auto auto auto;
+    gap: 8px 10px;
+    padding: 13px;
+  }
+
+  .exam-card:not(.exam-card-compact) .exam-tags {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    min-width: 0;
+    height: auto;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .exam-card:not(.exam-card-compact) .exam-tags small {
+    font-size: 9px;
+  }
+
+  .exam-card:not(.exam-card-compact) .subject-icon {
+    grid-column: 1;
+    grid-row: 2 / 4;
+    align-self: start;
+    width: 44px;
+    height: 44px;
+  }
+
+  .exam-card:not(.exam-card-compact) .subject-icon img {
+    width: 44px;
+    height: 44px;
+  }
+
+  .exam-card:not(.exam-card-compact) .exam-content h3 {
+    grid-column: 2;
+    grid-row: 2;
+    align-self: start;
+    min-width: 0;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .exam-card:not(.exam-card-compact) .exam-content h4 {
+    grid-column: 2;
+    grid-row: 3;
+    align-self: start;
+    min-width: 0;
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.4;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .exam-card:not(.exam-card-compact) .exam-content h4::before {
+    content: none;
+  }
+
+  .exam-card:not(.exam-card-compact) .teacher {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    min-width: 0;
+    gap: 5px;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .exam-card:not(.exam-card-compact) .teacher svg {
+    flex: 0 0 14px;
+  }
+
+  .exam-card:not(.exam-card-compact) .exam-details {
+    position: static;
+    grid-column: 1 / -1;
+    grid-row: 5;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-self: stretch;
+    height: auto;
+    min-height: 66px;
+    gap: 6px;
+    margin: 0;
+    padding: 8px;
+    border: 1px solid #eef1f5;
+    border-radius: 12px;
+    background: #f8fafc;
+    white-space: normal;
+  }
+
+  .exam-card:not(.exam-card-compact) .exam-details > span {
+    display: grid;
+    min-width: 0;
+    grid-template-columns: 14px minmax(0, 1fr);
+    align-content: start;
+    align-items: center;
+    gap: 4px;
+    font-size: 9px;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  .exam-card:not(.exam-card-compact) .exam-details > span::before {
+    grid-column: 1 / -1;
+    color: #83909c;
+    font-size: 8px;
+    font-weight: 650;
+  }
+
+  .exam-card:not(.exam-card-compact) .exam-details > span:first-child::before {
+    content: "Tanggal";
+  }
+
+  .exam-card:not(.exam-card-compact) .exam-details > .exam-detail-duration::before {
+    content: "Durasi";
+  }
+
+  .exam-card:not(.exam-card-compact) .exam-details > .exam-detail-questions::before {
+    content: "Jumlah soal";
+  }
+
+  .exam-card:not(.exam-card-compact) .exam-details svg {
+    width: 14px;
+    height: 14px;
+  }
+
+  .exam-card:not(.exam-card-compact) .exam-detail-desktop-count {
+    display: none;
+  }
+
+  .exam-card:not(.exam-card-compact) .exam-detail-questions {
+    display: grid;
+  }
+
+  .exam-card:not(.exam-card-compact) .join-button {
+    grid-column: 1 / -1;
+    grid-row: 6;
+    width: 100%;
+    min-height: 46px;
+    height: auto;
+    margin: 0;
+    padding: 8px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    line-height: 1.35;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .exam-card-compact {
+    height: auto;
+    min-height: 138px;
+  }
+
+  .exam-card-compact .exam-content {
+    min-width: 0;
+  }
+
+  .exam-card-compact .exam-content h3,
+  .exam-card-compact .exam-content h4 {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 360px) {
+  .exam-card:not(.exam-card-compact) .exam-details {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-header,
+  .bottom-nav {
+    scroll-behavior: auto;
   }
 }

@@ -89,24 +89,45 @@ function Shell({
   isPlatformAdmin,
   basePath,
 }) {
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setMobileMenuOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [mobileMenuOpen]);
   const activeSchool = schools.find((school) => school.id === selectedSchoolId);
   const schoolName = activeSchool?.name ?? user.schoolName ?? "Sekolah";
   return <div className="admin-app">
-    <aside className="admin-sidebar">
+    {mobileMenuOpen && <button className="admin-drawer-backdrop" type="button" aria-label="Tutup menu" onClick={() => setMobileMenuOpen(false)} />}
+    <aside className={`admin-sidebar ${mobileMenuOpen ? "mobile-open" : ""}`} id="admin-mobile-navigation">
       <a className="brand" href={scopedPath(basePath, "/")}>
         <img className="brand-logo" src={dashboardLogo} alt="Logo NSolve-Tech" />
         <span><strong>NSolve-Tech</strong><small>PORTAL ADMIN</small></span>
       </a>
       <div className="workspace-label">RUANG KERJA ADMIN</div>
       <nav aria-label="Navigasi admin">
-        {navigation.filter(([, href]) => href !== "/sekolah" || isPlatformAdmin).map(([label, href, icon]) => <a className={path === href ? "active" : ""} href={scopedPath(basePath, href)} key={href}>
+        {navigation.filter(([, href]) => href !== "/sekolah" || isPlatformAdmin).map(([label, href, icon]) => <a className={path === href ? "active" : ""} href={scopedPath(basePath, href)} key={href} onClick={() => setMobileMenuOpen(false)}>
           <i aria-hidden="true">{icon}</i><span>{label}</span>
         </a>)}
       </nav>
       <div className="sidebar-school"><span>⌂</span>{schoolName}</div>
+      <button className="admin-mobile-logout" type="button" onClick={onLogout}>⇥ Keluar</button>
     </aside>
     <div className="admin-main">
       <header className="admin-header">
+        <button
+          className="admin-menu-button"
+          type="button"
+          aria-label="Buka menu navigasi"
+          aria-controls="admin-mobile-navigation"
+          aria-expanded={mobileMenuOpen}
+          onClick={() => setMobileMenuOpen((open) => !open)}
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16" /></svg>
+        </button>
         <div className="header-school"><span>⌂</span>{isPlatformAdmin
           ? <select
             className="school-selector"
@@ -121,6 +142,7 @@ function Shell({
           : schoolName}</div>
         <div className="account">
           <span><strong>{user.fullName}</strong><small>Admin</small></span>
+          <span className="admin-mobile-bell" aria-label="Notifikasi"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9ZM10 21h4" /></svg></span>
           <i>{initials(user.fullName)}</i>
           <button type="button" onClick={onLogout}>⇥ <span>Keluar</span></button>
         </div>

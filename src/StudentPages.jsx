@@ -213,6 +213,7 @@ function UiIcon({ name, size = 18 }) {
     arrow: <><path d="M4 12h15m-6-6 6 6-6 6" /></>,
     light: <><path d="M9 18h6M10 22h4M8 14a6 6 0 1 1 8 0c-.8.6-1 1.3-1 2H9c0-.7-.2-1.4-1-2Z" /></>,
     shield: <><path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z" /><path d="m9 12 2 2 4-4" /></>,
+    menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>,
   };
   return (
     <svg
@@ -237,30 +238,41 @@ function getInitials(fullName = "") {
 
 function SiteHeader({ active = "Ujian Siswa", waiting = false, user, onLogout }) {
   const schoolName = user?.schoolName ?? "Sekolah";
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const nav = [
     ["Dashboard", "/"],
     ["Ujian Siswa", "/ujian"],
     ["Nilai Saya", "/nilai"],
     ["Profil Saya", "/profil"],
   ];
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setMobileMenuOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [mobileMenuOpen]);
 
   return (
-    <header className={`site-header ${waiting ? "waiting-header" : ""}`}>
-      <aside className="student-sidebar">
+    <header className={`site-header ${waiting ? "waiting-header" : ""} ${mobileMenuOpen ? "mobile-menu-open" : ""}`}>
+      {mobileMenuOpen && <button className="student-drawer-backdrop" type="button" aria-label="Tutup menu" onClick={() => setMobileMenuOpen(false)} />}
+      <aside className={`student-sidebar ${mobileMenuOpen ? "mobile-open" : ""}`} id="student-mobile-navigation">
         <Brand variant="top" />
         <div className="student-role-label">PORTAL SISWA</div>
         <nav className="student-sidebar-nav" aria-label="Navigasi siswa">
           {nav.map(([label, href]) => (
-            <a className={label === active ? "active" : ""} href={href} key={label}>
+            <a className={label === active ? "active" : ""} href={href} key={label} onClick={() => setMobileMenuOpen(false)}>
               <UiIcon name={label === "Dashboard" ? "home" : label === "Ujian Siswa" ? "exam" : label === "Nilai Saya" ? "grades" : "profile"} />
               {label}
             </a>
           ))}
         </nav>
         <div className="student-sidebar-school">
-          <UiIcon name="profile" size={16} />
+          <UiIcon name="home" size={16} />
           <span>{schoolName}</span>
         </div>
+        <button className="student-mobile-logout" type="button" onClick={onLogout}>Keluar</button>
       </aside>
       <div className="student-main-header">
         <div className="student-header-school">🏫 {schoolName}</div>
@@ -274,21 +286,20 @@ function SiteHeader({ active = "Ujian Siswa", waiting = false, user, onLogout })
         </div>
       </div>
       <div className="site-mobile-main">
-        <Brand variant="compact" />
+        <button
+          className="site-menu-button"
+          type="button"
+          aria-label="Buka menu navigasi"
+          aria-controls="student-mobile-navigation"
+          aria-expanded={mobileMenuOpen}
+          onClick={() => setMobileMenuOpen((open) => !open)}
+        ><UiIcon name="menu" /></button>
+        <span className="site-mobile-school" title={schoolName}>{schoolName}</span>
         <div className="site-mobile-user">
-          <span><strong>{user?.fullName ?? "Siswa"}</strong><small>{user?.email}</small></span>
-          <i>{getInitials(user?.fullName)}</i>
-          {!waiting && <button aria-label="Notifikasi"><UiIcon name="bell" size={17} /></button>}
-          <button className="site-logout" onClick={onLogout}>Keluar</button>
+          <button aria-label="Notifikasi"><UiIcon name="bell" size={17} /></button>
+          <i role="img" aria-label={user?.fullName ?? "Siswa"}>{getInitials(user?.fullName)}</i>
         </div>
       </div>
-      {waiting && (
-        <nav className="waiting-mobile-nav">
-          {nav.slice(0, 4).map(([label, href]) => (
-            <a className={label === active ? "active" : ""} href={href} key={label}>{label}</a>
-          ))}
-        </nav>
-      )}
     </header>
   );
 }
@@ -474,9 +485,9 @@ function ExamPortal({ history = false, user, onLogout, onStartExam, startingExam
                       <h2>{exam.subject}<br />{exam.title}</h2>
                       <p className="topic">{exam.description}</p>
                       <div className="active-exam-meta">
-                        <span><UiIcon name="calendar" /> {date}</span>
-                        <span><UiIcon name="time" /> Durasi: <b>{exam.durationMinutes} Menit</b></span>
-                        <span><UiIcon name="book" /> {exam.questionCount} Butir Soal</span>
+                        <span className="exam-meta-date"><UiIcon name="calendar" /> {date}</span>
+                        <span className="exam-meta-duration"><UiIcon name="time" /> Durasi: <b>{exam.durationMinutes} Menit</b></span>
+                        <span className="exam-meta-questions"><UiIcon name="book" /> {exam.questionCount} Butir Soal</span>
                       </div>
                       <p className="instructor">Guru: <b>{exam.teacherName}</b></p>
                     </div>

@@ -258,9 +258,14 @@ function UpcomingExam({ exam, compact = false, onStart, starting }) {
               <Icon name="calendar" />
               {dateLabel}
             </span>
-            <span>
+            <span className="exam-detail-duration">
               <Icon name="clock" />
-              {exam.durationMinutes} Menit ({exam.questionCount} Soal)
+              <span className="exam-detail-duration-value">{exam.durationMinutes} Menit</span>
+              <span className="exam-detail-desktop-count"> ({exam.questionCount} Soal)</span>
+            </span>
+            <span className="exam-detail-questions" aria-label={`${exam.questionCount} Soal`}>
+              <Icon name="exam" />
+              {exam.questionCount} Soal
             </span>
           </div>
         )}

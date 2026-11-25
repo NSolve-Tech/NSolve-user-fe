@@ -39,6 +39,7 @@ function TeacherIcon({ name }) {
     arrow: <path d="M4 12h15m-6-6 6 6-6 6" />,
     back: <><path d="m15 18-6-6 6-6" /><path d="M9 12h12" /></>,
     logout: <><path d="M10 17l5-5-5-5M15 12H3" /><path d="M12 3h7a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-7" /></>,
+    menu: <><path d="M4 6h16M4 12h16M4 18h16" /></>,
   };
   return (
     <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -69,6 +70,15 @@ export function TeacherShell({
   const [remedialError, setRemedialError] = useState("");
   const [remedialOpen, setRemedialOpen] = useState(false);
   const [remedialBusy, setRemedialBusy] = useState("");
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  useEffect(() => {
+    if (!mobileMenuOpen) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === "Escape") setMobileMenuOpen(false);
+    };
+    document.addEventListener("keydown", closeOnEscape);
+    return () => document.removeEventListener("keydown", closeOnEscape);
+  }, [mobileMenuOpen]);
   useEffect(() => {
     if (user?.role !== "teacher") return undefined;
     let activeRequest = true;
@@ -147,12 +157,23 @@ export function TeacherShell({
   const pendingRemedialCount = remedialRequests.filter((request) => request.status === "pending").length;
   return (
     <div className="teacher-app">
-      <aside className="teacher-sidebar">
+      {mobileMenuOpen && (
+        <button
+          type="button"
+          className="teacher-drawer-backdrop"
+          aria-label="Tutup menu"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+      <aside
+        className={`teacher-sidebar ${mobileMenuOpen ? "mobile-open" : ""}`}
+        id="teacher-mobile-navigation"
+      >
         <Brand />
         <div className="teacher-role-label">{workspace}</div>
         <nav aria-label={isAdmin ? "Navigasi admin" : user?.role === "student" ? "Navigasi siswa" : "Navigasi guru"}>
           {links.map(([label, href, icon]) => (
-            <a className={active === label ? "active" : ""} href={href} key={label}>
+            <a className={active === label ? "active" : ""} href={href} key={label} onClick={() => setMobileMenuOpen(false)}>
               <TeacherIcon name={icon} /><span>{label}</span>
             </a>
           ))}
@@ -161,9 +182,22 @@ export function TeacherShell({
           <TeacherIcon name="school" />
           <span>{displaySchool}</span>
         </div>
+        <button className="teacher-mobile-logout" type="button" onClick={logout}>
+          <TeacherIcon name="logout" /> Keluar
+        </button>
       </aside>
       <div className="teacher-main">
         <header className="teacher-header">
+          <button
+            type="button"
+            className="teacher-menu-button"
+            aria-label="Buka menu navigasi"
+            aria-controls="teacher-mobile-navigation"
+            aria-expanded={mobileMenuOpen}
+            onClick={() => setMobileMenuOpen((open) => !open)}
+          >
+            <TeacherIcon name="menu" />
+          </button>
           <div className="teacher-header-school"><TeacherIcon name="school" />{isAdmin && adminSchools?.length
             ? <select
               className="teacher-admin-school-select"
@@ -174,7 +208,7 @@ export function TeacherShell({
               {adminSchools.map((school) => <option value={school.id} key={school.id}>{school.name}</option>)}
             </select>
             : <span>{displaySchool}</span>}</div>
-          {user?.role === "teacher" && <div className="teacher-notification">
+          {user?.role === "teacher" ? <div className="teacher-notification">
             <button
               type="button"
               className="teacher-notification-button"
@@ -235,7 +269,7 @@ export function TeacherShell({
                 </article>
               ))}
             </section>}
-          </div>}
+          </div> : <span className="teacher-mobile-bell" aria-label="Notifikasi"><TeacherIcon name="bell" /></span>}
           <div className="teacher-account">
             <span><strong>{displayName}</strong><small>{accountDescription}</small></span>
             <i>{initials}</i>
